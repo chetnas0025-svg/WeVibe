@@ -1,0 +1,193 @@
+{
+  "categories": [
+    {
+      "id": "sandwiches",
+      "name": "Sandwiches",
+      "items": [
+        { "name": "Veg Italian", "price": 139, "veg": true },
+        { "name": "Corn & Cheese", "price": 159, "veg": true },
+        { "name": "Cheese Italian", "price": 159, "veg": true },
+        { "name": "Paneer Tikka Sandwich", "price": 169, "veg": true },
+        { "name": "Peri Peri Paneer", "price": 169, "veg": true }
+      ]
+    },
+    {
+      "id": "quick-eats",
+      "name": "Quick Eats",
+      "items": [
+        { "name": "Cheese Nuggets", "price": 179, "veg": true },
+        { "name": "Kurkure Lolipops", "price": 189, "veg": true },
+        { "name": "Cheese Nachos", "price": 189, "veg": true },
+        { "name": "Korean Cheese Nachos", "price": 209, "veg": true },
+        { "name": "Pizza Pockets", "price": 209, "veg": true },
+        { "name": "Garlic Knots with Cheese", "price": 209, "veg": true }
+      ]
+    },
+    {
+      "id": "fries",
+      "name": "Fries",
+      "items": [
+        { "name": "Classic Fries", "price": 139, "veg": true },
+        { "name": "Masala Fries", "price": 159, "veg": true },
+        { "name": "Peri Peri Fries", "price": 179, "veg": true, "spicy": true },
+        { "name": "Cheese Fries", "price": 199, "veg": true },
+        { "name": "Super Fries Platter", "price": 259, "veg": true, "mustTry": true }
+      ]
+    },
+    {
+      "id": "burgers",
+      "name": "Burgers",
+      "items": [
+        { "name": "Bombay Party", "price": 59, "veg": true },
+        { "name": "Spicy Paneer", "price": 129, "veg": true, "spicy": true },
+        { "name": "Premium Injector", "price": 149, "veg": true, "mustTry": true },
+        { "name": "Pink Paradise", "price": 159, "veg": true, "mustTry": true, "description": "Signature burger with a beautiful custom pink bun and special chef sauce" }
+      ]
+    },
+    {
+      "id": "garlic-bread",
+      "name": "Garlic Bread",
+      "items": [
+        { "name": "Cheese Sticks", "price": 179, "veg": true },
+        { "name": "Supreme Garlic Bread", "price": 179, "veg": true },
+        { "name": "Stuffed Garlic Bread", "price": 199, "veg": true, "mustTry": true },
+        { "name": "Jumbo Cheese (18 inch)", "price": 299, "veg": true }
+      ]
+    },
+    {
+      "id": "pizza",
+      "name": "Pizza",
+      "priceHeaders": ["S", "M", "L"],
+      "items": [
+        { "name": "Margherita", "price": { "S": 129, "M": 309, "L": 395 }, "veg": true, "description": "Say cheese!" },
+        { "name": "Gardenia Pizza", "price": { "S": 199, "M": 379, "L": 449 }, "veg": true, "description": "Wholesome combo of onions, tomatoes & capsicum" },
+        { "name": "Chef's Veggie Pizza", "price": { "S": 199, "M": 379, "L": 449 }, "veg": true, "description": "Olives, tomatoes, paneer, capsicum" },
+        { "name": "Mexican Pizza", "price": { "S": 199, "M": 379, "L": 449 }, "veg": true, "description": "Onion, capsicum, mushroom, olives, special sauce inside" },
+        { "name": "Basil Pesto Pizza", "price": { "S": 199, "M": 379, "L": 449 }, "veg": true, "description": "Say hi to basil & cheese" },
+        { "name": "Greek Paneer Pizza", "price": { "S": 209, "M": 399, "L": 459 }, "veg": true, "description": "Paneer tikka, onion, capsicum, red paprika" },
+        { "name": "Italian Pizza", "price": { "S": 209, "M": 399, "L": 495 }, "veg": true, "description": "Olives, mushroom, jalapenos, bell peppers" }
+      ],
+      "addOns": [
+        { "name": "Extra Cheese", "price": 50 },
+        { "name": "Cheese Burst", "price": 75 },
+        { "name": "Cheese Blanket", "price": 110 },
+        { "name": "Any Extra Dip", "price": 30 }
+      ]
+    },
+    {
+      "id": "pasta",
+      "name": "Pasta",
+      "priceHeaders": ["Standard", "Roasted Cheese"],
+      "items": [
+        { "name": "Arrabbiata Red Sauce", "price": { "Standard": 189, "Roasted Cheese": 249 }, "veg": true },
+        { "name": "Alfredo White Sauce", "price": { "Standard": 189, "Roasted Cheese": 249 }, "veg": true },
+        { "name": "Peri Peri (Diffusion)", "price": { "Standard": 199, "Roasted Cheese": 259 }, "veg": true },
+        { "name": "Pink Panther", "price": 229, "veg": true, "mustTry": true },
+        { "name": "Parmesan", "price": 349, "veg": true }
+      ]
+    },
+    {
+      "id": "asian-chinese",
+      "name": "Asian Chinese",
+      "items": [
+        { "name": "Spring Roll", "price": 149, "veg": true },
+        { "name": "Chilli Potato", "price": 169, "veg": true, "spicy": true },
+        { "name": "Dry Manchurian", "price": 189, "veg": true },
+        { "name": "Honey Chilli Potato", "price": 199, "veg": true },
+        { "name": "Chilli Mushroom", "price": 209, "veg": true },
+        { "name": "Baby Corn Chilli Dry", "price": 209, "veg": true },
+        { "name": "Cheese Chilli", "price": 229, "veg": true },
+        { "name": "Paneer in the Box", "price": 269, "veg": true }
+      ]
+    },
+    {
+      "id": "noodles",
+      "name": "Noodles",
+      "items": [
+        { "name": "Veg Noodles", "price": 189, "veg": true },
+        { "name": "Chilli Garlic Noodles", "price": 219, "veg": true, "spicy": true },
+        { "name": "Hakka Noodles", "price": 269, "veg": true },
+        { "name": "Singapore Noodles", "price": 269, "veg": true }
+      ]
+    },
+    {
+      "id": "dim-sum",
+      "name": "Dim Sum",
+      "items": [
+        { "name": "Gardenia", "price": 139, "veg": true },
+        { "name": "Chilli", "price": 179, "veg": true, "spicy": true },
+        { "name": "Swiss Cheese", "price": 199, "veg": true, "mustTry": true },
+        { "name": "Spicy Crunch", "price": 209, "veg": true, "spicy": true }
+      ]
+    },
+    {
+      "id": "drinks",
+      "name": "Drinks",
+      "priceHeaders": ["M", "L", "XXXL"],
+      "items": [
+        { "name": "Classic Fresh Lime", "price": { "M": 109, "L": 149, "XXXL": 499 }, "veg": true },
+        { "name": "Virgin Mojito", "price": { "M": 129, "L": 179, "XXXL": 549 }, "veg": true },
+        { "name": "Mint Watermelon", "price": { "M": 129, "L": 179, "XXXL": 549 }, "veg": true, "mustTry": true },
+        { "name": "Green Apple", "price": { "M": 129, "L": 179, "XXXL": 549 }, "veg": true },
+        { "name": "Pink Lemonade", "price": { "M": 129, "L": 179, "XXXL": 549 }, "veg": true },
+        { "name": "Lemon & Mint Iced Tea", "price": { "M": 129, "L": 179, "XXXL": 549 }, "veg": true },
+        { "name": "Blue Curacao", "price": { "M": 129, "L": 179, "XXXL": 549 }, "veg": true, "mustTry": true, "description": "Vibrant blue curacao layered with lime, mint and fizzy soda" }
+      ]
+    },
+    {
+      "id": "shakes",
+      "name": "Shakes",
+      "items": [
+        { "name": "Strawberry", "price": 169, "veg": true },
+        { "name": "Chocolate Oreo", "price": 189, "veg": true },
+        { "name": "Strawberry Oreo", "price": 189, "veg": true },
+        { "name": "Chocolate Hazelnut", "price": 189, "veg": true },
+        { "name": "Choco Chip", "price": 189, "veg": true },
+        { "name": "Bubble Gum", "price": 189, "veg": true },
+        { "name": "Kitkat Shake", "price": 189, "veg": true, "mustTry": true },
+        { "name": "Ultimate Nutella", "price": 189, "veg": true },
+        { "name": "Sneaker Blast", "price": 189, "veg": true },
+        { "name": "Mocha Mania", "price": 199, "veg": true, "mustTry": true },
+        { "name": "Blueberry", "price": 199, "veg": true },
+        { "name": "Red Velvet", "price": 199, "veg": true },
+        { "name": "Black Current", "price": 199, "veg": true }
+      ]
+    },
+    {
+      "id": "coffee-cold",
+      "name": "Coffee (Cold)",
+      "priceHeaders": ["M", "L"],
+      "items": [
+        { "name": "Iced Coffee", "price": { "M": 109, "L": 129 }, "veg": true },
+        { "name": "Cafe Frappe", "price": { "M": 149, "L": 169 }, "veg": true },
+        { "name": "Frappe Caramel", "price": { "M": 149, "L": 179 }, "veg": true },
+        { "name": "Swiss Choco Frappe", "price": { "M": 159, "L": 199 }, "veg": true },
+        { "name": "Hazelnut Frappe", "price": { "M": 159, "L": 199 }, "veg": true },
+        { "name": "Irish", "price": { "M": 159, "L": 199 }, "veg": true },
+        { "name": "Tiramisu", "price": { "M": 159, "L": 199 }, "veg": true, "mustTry": true }
+      ]
+    },
+    {
+      "id": "coffee-hot",
+      "name": "Coffee (Hot)",
+      "priceHeaders": ["M", "L"],
+      "items": [
+        { "name": "Espresso Love", "price": { "M": 99, "L": 129 }, "veg": true },
+        { "name": "Cafe Latte", "price": { "M": 129, "L": 159 }, "veg": true },
+        { "name": "Cafe Caramel", "price": { "M": 129, "L": 159 }, "veg": true },
+        { "name": "Hazelnut Cappuccino", "price": { "M": 149, "L": 189 }, "veg": true },
+        { "name": "Swiss Hot Chocolate", "price": { "M": 149, "L": 189 }, "veg": true }
+      ]
+    },
+    {
+      "id": "desserts",
+      "name": "Desserts",
+      "items": [
+        { "name": "Pink Perry Potter (Ice Cream)", "price": 199, "veg": true },
+        { "name": "London Special (Ice Cream)", "price": 199, "veg": true },
+        { "name": "Velvet Love", "price": 219, "veg": true },
+        { "name": "Kitty Waffle", "price": 249, "veg": true, "mustTry": true, "description": "Adorable kitty-shaped warm waffle topped with berry cream and chocolate sauce" }
+      ]
+    }
+  ]
+}

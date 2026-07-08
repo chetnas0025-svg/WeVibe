@@ -1,0 +1,208 @@
+-- ==========================================================================
+-- PINK & BLUE CAFE — DATABASE SCHEMA & SECURITY POLICIES (SUPABASE POSTGRES)
+-- ==========================================================================
+
+-- 1. Automatic Timestamp Update Triggers Setup
+CREATE OR REPLACE FUNCTION update_modified_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = now();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+
+-- 2. Tables Definitions
+
+-- Categories Table
+CREATE TABLE IF NOT EXISTS categories (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    display_order INTEGER DEFAULT 0,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Menu Items Table
+CREATE TABLE IF NOT EXISTS menu_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    category_id UUID REFERENCES categories(id) ON DELETE CASCADE NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    price_small NUMERIC,
+    price_medium NUMERIC,
+    price_large NUMERIC,
+    price_xxxl NUMERIC,
+    is_veg BOOLEAN DEFAULT true,
+    is_must_try BOOLEAN DEFAULT false,
+    is_spicy BOOLEAN DEFAULT false,
+    image_url TEXT,
+    is_active BOOLEAN DEFAULT true,
+    display_order INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Gallery Images Table
+CREATE TABLE IF NOT EXISTS gallery_images (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    image_url TEXT NOT NULL,
+    caption TEXT,
+    display_order INTEGER DEFAULT 0,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Cafe Settings Table (Single-row configurations)
+CREATE TABLE IF NOT EXISTS cafe_settings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    address TEXT NOT NULL,
+    map_embed_url TEXT,
+    phone TEXT NOT NULL,
+    whatsapp_number TEXT NOT NULL,
+    email TEXT NOT NULL,
+    instagram_url TEXT,
+    facebook_url TEXT,
+    hours_json JSONB NOT NULL,
+    gemini_api_key TEXT, -- Secure API Key for AI Menu scanning
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Offers/Promotional Banners Table
+CREATE TABLE IF NOT EXISTS offers (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title TEXT NOT NULL,
+    description TEXT,
+    badge_text TEXT,
+    image_url TEXT,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    is_active BOOLEAN DEFAULT true,
+    display_order INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Reservations Table
+CREATE TABLE IF NOT EXISTS reservations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    phone TEXT NOT NULL,
+    date DATE NOT NULL,
+    time TIME NOT NULL,
+    party_size INTEGER NOT NULL,
+    occasion_note TEXT,
+    status TEXT DEFAULT 'new' CHECK (status IN ('new', 'confirmed', 'cancelled')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Contact Submissions Table
+CREATE TABLE IF NOT EXISTS contact_submissions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    email_or_phone TEXT NOT NULL,
+    message TEXT NOT NULL,
+    status TEXT DEFAULT 'unread' CHECK (status IN ('unread', 'read')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Newsletter Signups Table
+CREATE TABLE IF NOT EXISTS newsletter_signups (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email TEXT UNIQUE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+
+-- 3. Triggers Registration for updated_at column
+CREATE TRIGGER update_categories_modtime BEFORE UPDATE ON categories FOR EACH ROW EXECUTE FUNCTION update_modified_column();
+CREATE TRIGGER update_menu_items_modtime BEFORE UPDATE ON menu_items FOR EACH ROW EXECUTE FUNCTION update_modified_column();
+CREATE TRIGGER update_gallery_images_modtime BEFORE UPDATE ON gallery_images FOR EACH ROW EXECUTE FUNCTION update_modified_column();
+CREATE TRIGGER update_cafe_settings_modtime BEFORE UPDATE ON cafe_settings FOR EACH ROW EXECUTE FUNCTION update_modified_column();
+CREATE TRIGGER update_offers_modtime BEFORE UPDATE ON offers FOR EACH ROW EXECUTE FUNCTION update_modified_column();
+CREATE TRIGGER update_reservations_modtime BEFORE UPDATE ON reservations FOR EACH ROW EXECUTE FUNCTION update_modified_column();
+CREATE TRIGGER update_contact_submissions_modtime BEFORE UPDATE ON contact_submissions FOR EACH ROW EXECUTE FUNCTION update_modified_column();
+
+
+-- 4. Enable Row Level Security (RLS)
+ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE menu_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE gallery_images ENABLE ROW LEVEL SECURITY;
+ALTER TABLE cafe_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE offers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reservations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE contact_submissions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE newsletter_signups ENABLE ROW LEVEL SECURITY;
+
+
+-- 5. Define RLS Policies for Anon & Authenticated Admin Roles
+
+-- Categories Policies
+CREATE POLICY "Allow public select on active categories" ON categories FOR SELECT TO anon USING (is_active = true);
+CREATE POLICY "Allow authenticated full access on categories" ON categories FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- Menu Items Policies
+CREATE POLICY "Allow public select on active menu items" ON menu_items FOR SELECT TO anon USING (is_active = true);
+CREATE POLICY "Allow authenticated full access on menu items" ON menu_items FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- Gallery Images Policies
+CREATE POLICY "Allow public select on active gallery images" ON gallery_images FOR SELECT TO anon USING (is_active = true);
+CREATE POLICY "Allow authenticated full access on gallery images" ON gallery_images FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- Cafe Settings Policies
+CREATE POLICY "Allow public select on settings" ON cafe_settings FOR SELECT TO anon USING (true);
+CREATE POLICY "Allow authenticated full access on settings" ON cafe_settings FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- Offers Policies
+CREATE POLICY "Allow public select on active offers" ON offers FOR SELECT TO anon USING (is_active = true AND end_date >= CURRENT_DATE);
+CREATE POLICY "Allow authenticated full access on offers" ON offers FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- Reservations Policies
+CREATE POLICY "Allow public insert on reservations" ON reservations FOR INSERT TO anon WITH CHECK (true);
+CREATE POLICY "Allow authenticated full access on reservations" ON reservations FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- Contact Submissions Policies
+CREATE POLICY "Allow public insert on contact submissions" ON contact_submissions FOR INSERT TO anon WITH CHECK (true);
+CREATE POLICY "Allow authenticated full access on contact submissions" ON contact_submissions FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- Newsletter Signups Policies
+CREATE POLICY "Allow public insert on newsletter signups" ON newsletter_signups FOR INSERT TO anon WITH CHECK (true);
+CREATE POLICY "Allow authenticated full access on newsletter signups" ON newsletter_signups FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+
+-- 6. Supabase Storage buckets & policies for uploaded cafe photos
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('cafe-uploads', 'cafe-uploads', true)
+ON CONFLICT (id) DO NOTHING;
+
+CREATE POLICY "Allow authenticated uploads to cafe-uploads bucket" ON storage.objects
+FOR INSERT TO authenticated WITH CHECK (bucket_id = 'cafe-uploads');
+
+CREATE POLICY "Allow authenticated updates to cafe-uploads bucket" ON storage.objects
+FOR UPDATE TO authenticated WITH CHECK (bucket_id = 'cafe-uploads');
+
+CREATE POLICY "Allow authenticated deletions from cafe-uploads bucket" ON storage.objects
+FOR DELETE TO authenticated USING (bucket_id = 'cafe-uploads');
+
+CREATE POLICY "Allow public read-only access to cafe-uploads bucket" ON storage.objects
+FOR SELECT TO public USING (bucket_id = 'cafe-uploads');
+
+
+-- 7. Initial Seed Data: Global Settings Row
+INSERT INTO cafe_settings (id, address, map_embed_url, phone, whatsapp_number, email, instagram_url, facebook_url, hours_json)
+VALUES (
+    '00000000-0000-0000-0000-000000000000',
+    '220-B, Satiya Wala Mandir Road, Model Town, Karnal, Haryana 132001',
+    'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3464.7107770857317!2d76.97495097629555!3d29.699144475101672!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x390e7195dfb8243b%3A0xe9f7bf9c855a0b73!2sSatiya%20Wala%20Mandir%20Road%2C%20Model%20Town%2C%20Karnal%2C%20Haryana%20132001!5e0!3m2!1sen!2sin!4v1711200000000!5m2!1sen!2sin',
+    '+91-9991110124',
+    '+91-9991110124',
+    'info@pinkandbluecafe.com',
+    'https://instagram.com',
+    'https://facebook.com',
+    '{"mon": "11:00 AM to 10:15 PM", "tue": "11:00 AM to 10:15 PM", "wed": "11:00 AM to 10:15 PM", "thu": "11:00 AM to 10:15 PM", "fri": "11:00 AM to 10:15 PM", "sat": "11:00 AM to 10:15 PM", "sun": "11:00 AM to 10:15 PM"}'
+) ON CONFLICT DO NOTHING;
