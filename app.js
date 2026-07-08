@@ -40,14 +40,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const reducedMotionToggle = document.getElementById('reduced-motion-toggle');
 
   /* ==========================================================================
-     0. SUPABASE CLIENT INITIALIZATION (With Graceful Fallback)
+     0. SUPABASE CLIENT INITIALIZATION
      ========================================================================== */
   let supabase = null;
-  const isSupabaseConfigured = SUPABASE_URL && SUPABASE_URL !== "https://your-supabase-url.supabase.co";
-  
-  if (typeof window.supabase !== 'undefined' && isSupabaseConfigured) {
-    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  }
+
 
   /* ==========================================================================
      0A. PRELOADER HIDE LOGIC
@@ -754,7 +750,41 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  loadMenu();
+  async function initApplication() {
+    let currentUrl = SUPABASE_URL;
+    let currentAnonKey = SUPABASE_ANON_KEY;
+
+    try {
+      const response = await fetch('supabase_config.json');
+      if (response.ok) {
+        const config = await response.json();
+        if (config.SUPABASE_URL && config.SUPABASE_ANON_KEY) {
+          currentUrl = config.SUPABASE_URL;
+          currentAnonKey = config.SUPABASE_ANON_KEY;
+          console.log("Supabase config loaded successfully from supabase_config.json");
+        }
+        if (config.SENTRY_DSN && typeof window.Sentry !== 'undefined') {
+          window.Sentry.init({
+            dsn: config.SENTRY_DSN,
+            tracesSampleRate: 1.0
+          });
+          console.log("Sentry tracking initialized.");
+        }
+      }
+    } catch (e) {
+      console.log("No supabase_config.json found or failed to parse. Using default config.");
+    }
+
+    const isSupabaseConfigured = currentUrl && currentUrl !== "https://your-supabase-url.supabase.co";
+    
+    if (typeof window.supabase !== 'undefined' && isSupabaseConfigured) {
+      supabase = window.supabase.createClient(currentUrl, currentAnonKey);
+    }
+
+    await loadMenu();
+  }
+
+  initApplication();
 
   /* ==========================================================================
      6. SCROLL-TRIGGERED REVEAL OBSERVER
@@ -835,6 +865,14 @@ document.addEventListener('DOMContentLoaded', () => {
   if (bookingForm) {
     bookingForm.addEventListener('submit', async (e) => {
       e.preventDefault();
+
+      // Honeypot spam check
+      const honeypot = document.getElementById('booking-honeypot').value;
+      if (honeypot) {
+        console.warn("Honeypot triggered. Booking blocked.");
+        bookingForm.reset();
+        return;
+      }
       
       const name = document.getElementById('booking-name').value.trim();
       const phone = document.getElementById('booking-phone').value.trim();

@@ -70,13 +70,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const scanMissingList = document.getElementById('scan-missing-list');
 
   /* ==========================================================================
-     0. SUPABASE CLIENT INITIALIZATION (Resilient)
+     0. SUPABASE CLIENT INITIALIZATION
      ========================================================================== */
-  const isSupabaseConfigured = SUPABASE_URL && SUPABASE_URL !== "https://your-supabase-url.supabase.co";
-  
-  if (typeof window.supabase !== 'undefined' && isSupabaseConfigured) {
-    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  }
 
   // Pre-load Lucide icons
   if (window.lucide) window.lucide.createIcons();
@@ -172,7 +167,41 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  checkAuthSession();
+  async function initApplication() {
+    let currentUrl = SUPABASE_URL;
+    let currentAnonKey = SUPABASE_ANON_KEY;
+
+    try {
+      const response = await fetch('supabase_config.json');
+      if (response.ok) {
+        const config = await response.json();
+        if (config.SUPABASE_URL && config.SUPABASE_ANON_KEY) {
+          currentUrl = config.SUPABASE_URL;
+          currentAnonKey = config.SUPABASE_ANON_KEY;
+          console.log("Supabase config loaded successfully from supabase_config.json");
+        }
+        if (config.SENTRY_DSN && typeof window.Sentry !== 'undefined') {
+          window.Sentry.init({
+            dsn: config.SENTRY_DSN,
+            tracesSampleRate: 1.0
+          });
+          console.log("Sentry tracking initialized.");
+        }
+      }
+    } catch (e) {
+      console.log("No supabase_config.json found or failed to parse. Using default config.");
+    }
+
+    const isSupabaseConfigured = currentUrl && currentUrl !== "https://your-supabase-url.supabase.co";
+    
+    if (typeof window.supabase !== 'undefined' && isSupabaseConfigured) {
+      supabase = window.supabase.createClient(currentUrl, currentAnonKey);
+    }
+
+    await checkAuthSession();
+  }
+
+  initApplication();
 
   /* ==========================================================================
      2. TAB NAVIGATION

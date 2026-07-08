@@ -16,6 +16,8 @@ browser/
 .env.development.local
 .env.test.local
 .env.production.local
+supabase_config.json
+
 
 # Dependency directories
 node_modules/

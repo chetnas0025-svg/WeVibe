@@ -65,6 +65,11 @@
     "menu": "https://pinkandbluecafe.com/menu"
   }
   </script>
+  <!-- Sentry Error Tracking Script -->
+  <script src="https://browser.sentry-cdn.com/8.9.2/bundle.min.js" crossorigin="anonymous"></script>
+  
+  <!-- Cloudflare Turnstile Spam Prevention Script -->
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 </head>
 <body>
 
@@ -427,6 +432,7 @@
         <div class="reservation-form-card scroll-reveal right">
           <h3>Request a Table</h3>
           <form id="booking-form" class="booking-form">
+            <input type="text" id="booking-honeypot" style="display:none;" tabindex="-1" autocomplete="off">
             <div class="form-group">
               <label for="booking-name">Your Name</label>
               <input type="text" id="booking-name" required placeholder="e.g. Rahul Sharma" aria-required="true">
@@ -471,6 +477,10 @@
               <label for="booking-notes">Special Requests / Notes</label>
               <textarea id="booking-notes" rows="2" placeholder="Tell us if you want a table near the tree or floral swing..."></textarea>
             </div>
+            
+            <!-- Cloudflare Turnstile Spam Prevention -->
+            <div class="cf-turnstile" data-sitekey="1x00000000000000000000AA" data-theme="light" style="margin-bottom: 12px; display: flex; justify-content: center;"></div>
+            
             <button type="submit" class="btn btn-primary btn-full btn-bounce">
               <i data-lucide="check-circle-2"></i> Book Table via WhatsApp
             </button>
@@ -537,6 +547,10 @@
                   <label for="contact-message" style="font-size: 0.75rem;">Your Message</label>
                   <textarea id="contact-message" required rows="3" placeholder="Tell us what you'd like to ask..." style="padding: 10px 14px;"></textarea>
                 </div>
+                
+                <!-- Cloudflare Turnstile Spam Prevention -->
+                <div class="cf-turnstile" data-sitekey="1x00000000000000000000AA" data-theme="light" style="margin-top: 4px;"></div>
+                
                 <button type="submit" class="btn btn-primary btn-bounce" style="padding: 12px 24px; font-size: 0.95rem; margin-top: 4px;">
                   <i data-lucide="send"></i> Send Message
                 </button>
@@ -591,6 +605,8 @@
               <i data-lucide="bell" style="width: 14px; height: 14px;"></i>
             </button>
           </form>
+          <!-- Cloudflare Turnstile Spam Prevention -->
+          <div class="cf-turnstile" data-sitekey="1x00000000000000000000AA" data-theme="dark" data-size="compact" style="margin-top: 8px;"></div>
         </div>
       </div>
 

@@ -206,3 +206,71 @@ VALUES (
     'https://facebook.com',
     '{"mon": "11:00 AM to 10:15 PM", "tue": "11:00 AM to 10:15 PM", "wed": "11:00 AM to 10:15 PM", "thu": "11:00 AM to 10:15 PM", "fri": "11:00 AM to 10:15 PM", "sat": "11:00 AM to 10:15 PM", "sun": "11:00 AM to 10:15 PM"}'
 ) ON CONFLICT DO NOTHING;
+
+
+-- ==========================================================================
+-- 8. SUBMISSION RATE-LIMITING TRIGGERS (Abuse Prevention)
+-- ==========================================================================
+
+-- Reservations Rate Limiter (Max 5 per hour per phone)
+CREATE OR REPLACE FUNCTION check_reservation_rate_limit()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF (
+        SELECT COUNT(*)
+        FROM reservations
+        WHERE phone = NEW.phone
+          AND created_at > now() - INTERVAL '1 hour'
+    ) >= 5 THEN
+        RAISE EXCEPTION 'Rate limit exceeded for this phone number. Please try again in an hour.';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE TRIGGER reservations_rate_limit_trigger
+BEFORE INSERT ON reservations
+FOR EACH ROW EXECUTE FUNCTION check_reservation_rate_limit();
+
+
+-- Contact Submissions Rate Limiter (Max 5 per hour per email/phone)
+CREATE OR REPLACE FUNCTION check_contact_rate_limit()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF (
+        SELECT COUNT(*)
+        FROM contact_submissions
+        WHERE email_or_phone = NEW.email_or_phone
+          AND created_at > now() - INTERVAL '1 hour'
+    ) >= 5 THEN
+        RAISE EXCEPTION 'Rate limit exceeded for this contact. Please try again in an hour.';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE TRIGGER contact_submissions_rate_limit_trigger
+BEFORE INSERT ON contact_submissions
+FOR EACH ROW EXECUTE FUNCTION check_contact_rate_limit();
+
+
+-- Newsletter Signups Rate Limiter (Max 5 per hour per email)
+CREATE OR REPLACE FUNCTION check_newsletter_rate_limit()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF (
+        SELECT COUNT(*)
+        FROM newsletter_signups
+        WHERE email = NEW.email
+          AND created_at > now() - INTERVAL '1 hour'
+    ) >= 5 THEN
+        RAISE EXCEPTION 'Rate limit exceeded for this email. Please try again in an hour.';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE TRIGGER newsletter_signups_rate_limit_trigger
+BEFORE INSERT ON newsletter_signups
+FOR EACH ROW EXECUTE FUNCTION check_newsletter_rate_limit();
+
