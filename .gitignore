@@ -28,3 +28,6 @@ web_modules/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# User uploads
+uploads/

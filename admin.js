@@ -196,6 +196,10 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (typeof window.supabase !== 'undefined' && isSupabaseConfigured) {
       supabase = window.supabase.createClient(currentUrl, currentAnonKey);
+      console.log("Live Supabase client initialized.");
+    } else if (typeof window.LocalDatabaseClient !== 'undefined') {
+      supabase = new window.LocalDatabaseClient();
+      console.log("Local database client proxy initialized.");
     }
 
     await checkAuthSession();
