@@ -21,8 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let scanSelectedFiles = [];
   let scanDiffItems = []; // holds current items being reviewed
   let dbActiveItems = []; // cache of current database items for diffing
-  let geminiApiKey = "";
-
+  
   // DOM Elements
   const loginContainer = document.getElementById('login-container');
   const loginForm = document.getElementById('admin-login-form');
@@ -80,14 +79,6 @@ document.addEventListener('DOMContentLoaded', () => {
      1. AUTHENTICATION & LOGIN FLOW
      ========================================================================== */
   async function checkAuthSession() {
-    if (!supabase) {
-      console.warn("Supabase is unconfigured. Showing mock dashboard interface.");
-      loginContainer.style.display = 'none';
-      adminApp.style.display = 'block';
-      loadMockDashboardData();
-      return;
-    }
-
     try {
       const { data, error } = await supabase.auth.getSession();
       if (error) throw error;
@@ -105,8 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function showLogin() {
-    loginContainer.style.display = 'flex';
-    adminApp.style.display = 'none';
+    window.location.href = '/admin/login';
   }
 
   function showDashboard() {
@@ -161,6 +151,11 @@ document.addEventListener('DOMContentLoaded', () => {
     logoutBtn.addEventListener('click', async () => {
       if (supabase) {
         await supabase.auth.signOut();
+      }
+      try {
+        await fetch('/api/auth/logout', { method: 'POST' });
+      } catch (err) {
+        console.error("Server logout error:", err);
       }
       currentSession = null;
       showLogin();
@@ -1131,40 +1126,38 @@ document.addEventListener('DOMContentLoaded', () => {
       scannerUploadCard.style.display = 'none';
       scannerLoadingCard.style.display = 'block';
 
-      // Check for Gemini API key
-      if (!geminiApiKey) {
-        // Run mock extraction if API key isn't provided
-        updateScanProgress("API key blank. Initiating high-fidelity scan simulation...");
-        setTimeout(() => updateScanProgress("Reading text grids from images..."), 1200);
-        setTimeout(() => updateScanProgress("Running menu comparison engines..."), 2600);
-        setTimeout(() => {
-          const simulatedResults = getMockScanResults();
-          buildDiffReviewScreen(simulatedResults);
-        }, 4000);
-      } else {
-        // Run Gemini Vision API Call
-        try {
-          updateScanProgress("Reading menu photo files...");
-          const base64Images = [];
-          for (const file of scanSelectedFiles) {
-            const b64 = await convertFileToBase64(file);
-            base64Images.push(b64);
-          }
-
-          updateScanProgress("Sending images to Gemini 2.5 Flash API...");
-          
-          const results = [];
-          for (let i = 0; i < base64Images.length; i++) {
-            updateScanProgress(`Analyzing page ${i+1} of ${base64Images.length} with Gemini...`);
-            const pageData = await callGeminiVision(base64Images[i]);
-            results.push(...pageData);
-          }
-
-          buildDiffReviewScreen(results);
-        } catch (err) {
-          alert(`Gemini AI scan failed: ${err.message}`);
-          resetScannerUI();
+      try {
+        updateScanProgress("Reading menu photo files...");
+        const base64Images = [];
+        for (const file of scanSelectedFiles) {
+          const b64 = await convertFileToBase64(file);
+          base64Images.push(b64);
         }
+
+        updateScanProgress("Processing files with Gemini AI backend...");
+        const res = await fetch('/api/scan-menu', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ images: base64Images })
+        });
+
+        if (!res.ok) {
+          throw new Error(await res.text());
+        }
+
+        const data = await res.json();
+        if (!data.success) {
+          throw new Error(data.error || "Unknown scanning error");
+        }
+
+        if (data.simulated) {
+          console.log("Gemini API key is blank. Simulation results loaded.");
+        }
+
+        buildDiffReviewScreen(data.items);
+      } catch (err) {
+        alert(`Menu analysis failed: ${err.message}`);
+        resetScannerUI();
       }
     });
   }
@@ -1187,60 +1180,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  async function callGeminiVision(base64Data) {
-    const apiURL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`;
-    
-    const requestBody = {
-      contents: [
-        {
-          parts: [
-            {
-              text: `Extract all menu items from this printed menu photo page. Output ONLY a raw JSON array. DO NOT wrap it in markdown block fences. Each object in the array MUST have these keys:
-- category: string (the category name e.g. 'Pizza', 'Sandwiches', 'Shakes')
-- name: string (the item name)
-- description: string (the descriptions if listed, otherwise null)
-- price_small: number or null (small / standard size cost)
-- price_medium: number or null (medium / standard single cost)
-- price_large: number or null (large size cost)
-- price_xxxl: number or null (xxxl drinks cost)
-- is_veg: boolean (true if veg / green dot, false if contains meat)
-- is_spicy: boolean (true if spicy or flame tag is shown, else false)
-- is_must_try: boolean (true if musttry or crown tag is shown, else false)
-- confidence: number (from 0.0 to 1.0, representing text clarity)`
-            },
-            {
-              inlineData: {
-                mimeType: "image/jpeg",
-                data: base64Data
-              }
-            }
-          ]
-        }
-      ],
-      generationConfig: {
-        responseMimeType: "application/json"
-      }
-    };
 
-    const response = await fetch(apiURL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(requestBody)
-    });
-
-    if (!response.ok) {
-      throw new Error(`Google API responded with status ${response.status}`);
-    }
-
-    const data = await response.json();
-    try {
-      const contentText = data.candidates[0].content.parts[0].text;
-      return JSON.parse(contentText);
-    } catch (e) {
-      console.error("Gemini response parsing error. Raw response text:", data);
-      throw new Error("Unable to parse structured JSON from Gemini API response.");
-    }
-  }
 
   function getMockScanResults() {
     return [
@@ -1891,9 +1831,7 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('settings-map-url').value = data.map_embed_url || '';
       document.getElementById('settings-instagram').value = data.instagram_url || '';
       document.getElementById('settings-facebook').value = data.facebook_url || '';
-      document.getElementById('settings-gemini-key').value = data.gemini_api_key || '';
       
-      geminiApiKey = data.gemini_api_key || ''; // cache locally
 
       const hoursFieldsContainer = document.getElementById('hours-config-fields');
       hoursFieldsContainer.innerHTML = '';
@@ -1937,7 +1875,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const mapUrl = document.getElementById('settings-map-url').value.trim();
       const insta = document.getElementById('settings-instagram').value.trim();
       const fb = document.getElementById('settings-facebook').value.trim();
-      const geminiKey = document.getElementById('settings-gemini-key').value.trim();
 
       const hoursJson = {
         mon: document.getElementById('hours-mon').value.trim(),
@@ -1960,14 +1897,11 @@ document.addEventListener('DOMContentLoaded', () => {
             map_embed_url: mapUrl || null,
             instagram_url: insta || null,
             facebook_url: fb || null,
-            hours_json: hoursJson,
-            gemini_api_key: geminiKey || null
+            hours_json: hoursJson
           })
           .eq('id', '00000000-0000-0000-0000-000000000000'); 
 
         if (error) throw error;
-        
-        geminiApiKey = geminiKey; // cache key in memory
         
         triggerPetalSuccessBurst();
         alert("Global configurations saved successfully!");

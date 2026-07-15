@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Sign In | Pink & Blue Cafe</title>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Base Theme Stylesheet -->
+  <link rel="stylesheet" href="/styles.css">
+  
+  <style>
+    body {
+      background: linear-gradient(135deg, #FADDE8 0%, #E6EFFF 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      overflow: hidden;
+      position: relative;
+    }
+    
+    /* Background Cherry Blossom Container */
+    .blossom-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+    }
+    
+    .login-container {
+      width: 100%;
+      max-width: 440px;
+      z-index: 10;
+      transform: translateY(20px);
+      opacity: 0;
+      animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    
+    .login-card {
+      background: rgba(255, 255, 255, 0.75);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1.5px solid rgba(255, 255, 255, 0.6);
+      border-radius: var(--radius-lg);
+      padding: 40px 30px;
+      box-shadow: 0 20px 40px rgba(27, 42, 74, 0.08);
+      text-align: center;
+      position: relative;
+    }
+    
+    .logo-container {
+      width: 70px;
+      height: 70px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(250, 221, 232, 0.6) 0%, rgba(230, 0, 126, 0.08) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px auto;
+      border: 1px solid rgba(242, 166, 196, 0.3);
+    }
+    
+    .logo-icon {
+      color: var(--primary-pink);
+      width: 38px;
+      height: 38px;
+    }
+    
+    .login-card h1 {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--navy-dark);
+      margin-bottom: 8px;
+    }
+    
+    .login-card p {
+      color: var(--navy-muted);
+      margin-bottom: 30px;
+      font-size: 0.9rem;
+    }
+    
+    .form-group {
+      margin-bottom: 20px;
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    
+    .form-group label {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--navy-dark);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .form-group input {
+      padding: 12px 16px;
+      border-radius: var(--radius-sm);
+      border: 1.5px solid rgba(27, 42, 74, 0.1);
+      background-color: rgba(255, 255, 255, 0.8);
+      color: var(--navy-dark);
+      font-size: 0.95rem;
+      outline: none;
+      transition: var(--transition-smooth);
+    }
+    
+    .form-group input:focus {
+      border-color: var(--primary-pink);
+      box-shadow: 0 0 0 4px rgba(242, 166, 196, 0.15);
+      background-color: var(--white);
+    }
+    
+    .login-btn {
+      width: 100%;
+      padding: 14px;
+      font-size: 1rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 10px;
+      background-color: var(--navy-dark);
+      color: var(--white);
+      border-radius: var(--radius-sm);
+      transition: var(--transition-smooth);
+      border: none;
+      cursor: pointer;
+    }
+    
+    .login-btn:hover {
+      background-color: var(--accent-magenta);
+      box-shadow: 0 4px 15px rgba(230, 0, 126, 0.3);
+    }
+    
+    .error-alert {
+      display: none;
+      background-color: #fef2f2;
+      border: 1px solid #fee2e2;
+      color: #b91c1c;
+      padding: 12px;
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      margin-bottom: 20px;
+      text-align: left;
+      font-weight: 500;
+    }
+    
+    .forgot-link {
+      font-size: 0.8rem;
+      color: var(--primary-pink);
+      text-decoration: none;
+      font-weight: 600;
+      align-self: flex-end;
+      margin-top: 4px;
+      transition: var(--transition-smooth);
+    }
+    
+    .forgot-link:hover {
+      color: var(--accent-magenta);
+      text-decoration: underline;
+    }
+    
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Floating Cherry Blossom Petals Background -->
+  <div id="blossom-container" class="blossom-container"></div>
+
+  <div class="login-container">
+    <div class="login-card">
+      <div class="logo-container">
+        <svg viewBox="0 0 100 80" class="logo-icon">
+          <path d="M 50 35 C 30 10, 5 25, 25 55 C 35 65, 50 78, 50 78 C 50 78, 65 65, 75 55 C 95 25, 70 10, 50 35 Z" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M 50 15 C 35 30, 20 45, 35 60 C 50 75, 65 60, 50 45" fill="none" stroke="currentColor" stroke-width="4" stroke-opacity="0.4" stroke-linecap="round"/>
+        </svg>
+      </div>
+      
+      <h1>Admin Dashboard</h1>
+      <p>Secure login for Pink & Blue Cafe administrators.</p>
+      
+      <div id="error-box" class="error-alert"></div>
+      
+      <form id="login-form">
+        <div class="form-group">
+          <label for="login-email">Email Address</label>
+          <input type="email" id="login-email" required placeholder="admin@pinkandbluecafe.com" autocomplete="username">
+        </div>
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label for="login-password">Password</label>
+          <input type="password" id="login-password" required placeholder="••••••••" autocomplete="current-password">
+          <a href="#" id="btn-forgot-password" class="forgot-link">Forgot password?</a>
+        </div>
+        <button type="submit" id="btn-submit" class="login-btn">
+          <i data-lucide="log-in"></i> Sign In
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Supabase JS Client SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Lucide Icon Library -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <script>
+    // Initialize Lucide icons
+    if (window.lucide) window.lucide.createIcons();
+    
+    // State variables
+    let supabaseClient = null;
+    const errorBox = document.getElementById('error-box');
+    const loginForm = document.getElementById('login-form');
+    const submitBtn = document.getElementById('btn-submit');
+    const forgotBtn = document.getElementById('btn-forgot-password');
+
+    // Floating Cherry Blossom Petals Background
+    const blossomContainer = document.getElementById('blossom-container');
+    
+    function createPetal() {
+      const petal = document.createElement('div');
+      petal.classList.add('petal');
+      const size = Math.random() * 8 + 8;
+      petal.style.width = `${size}px`;
+      petal.style.height = `${size}px`;
+      petal.style.left = `${Math.random() * 100}vw`;
+      petal.style.top = `-20px`;
+      
+      const colors = ['#F2A6C4', '#FADDE8', '#E6007E', '#FFB7D5'];
+      petal.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+      petal.style.opacity = Math.random() * 0.4 + 0.5;
+      
+      blossomContainer.appendChild(petal);
+      
+      let posY = -20;
+      let posX = parseFloat(petal.style.left);
+      let rotation = Math.random() * 360;
+      const speedY = Math.random() * 1 + 0.8;
+      const speedX = Math.random() * 0.5 - 0.25;
+      const spinSpeed = Math.random() * 1 - 0.5;
+      const wobbleSpeed = Math.random() * 0.02 + 0.01;
+      let angle = Math.random() * Math.PI;
+      
+      function step() {
+        posY += speedY;
+        angle += wobbleSpeed;
+        const currentX = posX + Math.sin(angle) * 5 + (speedX * posY / 10);
+        rotation += spinSpeed;
+        
+        petal.style.top = `${posY}px`;
+        petal.style.left = `${currentX}px`;
+        petal.style.transform = `rotate(${rotation}deg) skewX(${Math.sin(angle) * 10}deg)`;
+        
+        if (posY > window.innerHeight + 20) {
+          petal.remove();
+        } else {
+          requestAnimationFrame(step);
+        }
+      }
+      requestAnimationFrame(step);
+    }
+    
+    // Spawn initial petals
+    for (let i = 0; i < 15; i++) {
+      setTimeout(createPetal, Math.random() * 4000);
+    }
+    setInterval(createPetal, 3000);
+
+    // Initialize application credentials
+    async function initAuth() {
+      try {
+        const response = await fetch('/supabase_config.json');
+        if (response.ok) {
+          const config = await response.json();
+          const isSupabaseConfigured = config.SUPABASE_URL && config.SUPABASE_URL !== "https://your-supabase-url.supabase.co";
+          if (isSupabaseConfigured && typeof window.supabase !== 'undefined') {
+            supabaseClient = window.supabase.createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY);
+            console.log("Supabase Auth initialized.");
+          }
+        }
+      } catch (e) {
+        console.log("No config found, running in local dev mode.");
+      }
+    }
+
+    initAuth();
+
+    // Login submit action
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorBox.style.display = 'none';
+      
+      const email = document.getElementById('login-email').value.trim();
+      const password = document.getElementById('login-password').value;
+      const originalText = submitBtn.innerHTML;
+      
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `<i data-lucide="loader" class="animate-spin"></i> Authenticating...`;
+      if (window.lucide) window.lucide.createIcons();
+
+      try {
+        if (supabaseClient) {
+          // Live Supabase Authenticator
+          const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+          if (error) throw error;
+          
+          // Write token to server cookie for server-side validation
+          const session = data.session;
+          await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: session.access_token })
+          });
+        } else {
+          // Local Database Proxy Authenticator
+          const res = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+          });
+          
+          if (!res.ok) {
+            throw new Error(await res.text());
+          }
+
+          // Write session to localStorage for client-side Mock Database Client
+          const localSession = { user: { email }, token: 'local-admin-mock-token' };
+          localStorage.setItem('local_admin_session', JSON.stringify(localSession));
+        }
+        
+        // Success -> redirect to admin panel
+        window.location.href = '/admin';
+      } catch (err) {
+        console.error("Login failure:", err);
+        // Safe generic error message without confirming account existence
+        errorBox.textContent = "Sign In Failed: Incorrect email address or password. Please try again.";
+        errorBox.style.display = 'block';
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+        if (window.lucide) window.lucide.createIcons();
+      }
+    });
+
+    // Forgot password action
+    forgotBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      errorBox.style.display = 'none';
+      
+      const email = document.getElementById('login-email').value.trim();
+      if (!email) {
+        errorBox.textContent = "Please enter your Email Address in the input field above first.";
+        errorBox.style.display = 'block';
+        return;
+      }
+      
+      try {
+        if (supabaseClient) {
+          const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+            redirectTo: window.location.origin + '/admin/reset-password',
+          });
+          if (error) throw error;
+          alert(`A password reset link has been successfully sent to ${email}. Please check your inbox.`);
+        } else {
+          alert(`Password reset requests are simulation-only in local dev mode. (In production, this triggers a Supabase recovery email).`);
+        }
+      } catch (err) {
+        alert(`Reset Request Failed: ${err.message}`);
+      }
+    });
+  </script>
+</body>
+</html>

@@ -2,7 +2,12 @@ class LocalDatabaseClient {
   constructor() {
     this.auth = {
       getSession: async () => {
-        const session = localStorage.getItem('local_admin_session');
+        let session = localStorage.getItem('local_admin_session');
+        if (!session && window.location.pathname === '/admin') {
+          const mockSession = { user: { email: 'admin@pinkandbluecafe.com' }, token: 'local-admin-mock-token' };
+          localStorage.setItem('local_admin_session', JSON.stringify(mockSession));
+          session = JSON.stringify(mockSession);
+        }
         return { data: { session: session ? JSON.parse(session) : null }, error: null };
       },
       signInWithPassword: async ({ email, password }) => {

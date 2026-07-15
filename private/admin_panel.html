@@ -14,7 +14,7 @@
   <script src="https://browser.sentry-cdn.com/8.9.2/bundle.min.js" crossorigin="anonymous"></script>
 
   <!-- Base Theme Stylesheet (shares CSS variables) -->
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="/styles.css">
   
   <!-- Admin Specific CSS Additions -->
   <style>
@@ -731,12 +731,6 @@
                 </div>
               </div>
               
-              <div class="form-group">
-                <label for="settings-gemini-key">Gemini Developer API Key (For AI Menu Scanner)</label>
-                <input type="password" id="settings-gemini-key" placeholder="Enter your Gemini API Key (starts with AIza...)">
-                <span style="font-size: 0.75rem; color: var(--navy-muted);">Provide a key from Google AI Studio. If left blank, the menu scanner runs in a mock simulation mode for testing.</span>
-              </div>
-              
               <hr style="border: 0; border-top: 1px solid #cbd5e1; margin: 10px 0;">
               
               <h3 style="font-family: var(--font-title); font-size: 1.15rem; font-weight: 700; margin-bottom: 10px;">🕒 Operational Hours (Daily)</h3>
@@ -946,9 +940,9 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   
   <!-- Local Supabase Client Mock -->
-  <script src="supabase_client_mock.js"></script>
+  <script src="/supabase_client_mock.js"></script>
 
   <!-- JavaScript Controller -->
-  <script src="admin.js"></script>
+  <script src="/admin.js"></script>
 </body>
 </html>

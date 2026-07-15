@@ -1,5 +1,8 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
+const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -30,11 +33,64 @@ const upload = multer({ storage });
 
 app.use(cors());
 app.use(express.json());
+app.use(cookieParser());
+
+// Block direct browser access to the private folder containing protected pages
+app.use((req, res, next) => {
+  if (req.path.startsWith('/private')) {
+    return res.status(403).send("Access Denied");
+  }
+  next();
+});
 
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
   next();
 });
+
+const MOCK_JWT_SECRET = 'local-dev-mock-jwt-secret-key-12345';
+
+// Helper function to verify incoming session cookies (mock and Supabase JWT)
+function verifySession(req) {
+  const token = req.cookies.admin_session;
+  if (!token) return null;
+
+  // 1. Try Supabase verification if secret is provided in environment variables
+  const supabaseSecret = process.env.SUPABASE_JWT_SECRET;
+  if (supabaseSecret) {
+    try {
+      // Supabase JWT secret is base64-encoded; try buffer first
+      const decoded = jwt.verify(token, Buffer.from(supabaseSecret, 'base64'));
+      return decoded;
+    } catch (e) {
+      try {
+        // Fall back to literal string verification
+        const decoded = jwt.verify(token, supabaseSecret);
+        return decoded;
+      } catch (err) {
+        // Fall through to mock secret check
+      }
+    }
+  }
+
+  // 2. Fall back to local development mock verification
+  try {
+    const decoded = jwt.verify(token, MOCK_JWT_SECRET);
+    return decoded;
+  } catch (e) {
+    return null;
+  }
+}
+
+// Authentication gate middleware
+function requireAuth(req, res, next) {
+  const session = verifySession(req);
+  if (!session) {
+    return res.status(401).send("Unauthorized: Authentication required.");
+  }
+  req.user = session;
+  next();
+}
 
 // Serve static uploads
 app.use('/uploads', express.static(UPLOADS_DIR));
@@ -281,7 +337,12 @@ app.get('/api/:table', (req, res) => {
 
       // Single row selection
       if (q.singleVal) {
-        return res.json(items[0] || null);
+        const item = items[0] || null;
+        if (item && table === 'cafe_settings' && !verifySession(req)) {
+          const { gemini_api_key, ...safeItem } = item;
+          return res.json(safeItem);
+        }
+        return res.json(item || null);
       }
 
     } catch (err) {
@@ -290,11 +351,25 @@ app.get('/api/:table', (req, res) => {
     }
   }
 
+  if (table === 'cafe_settings' && !verifySession(req)) {
+    items = items.map(item => {
+      const { gemini_api_key, ...safeItem } = item;
+      return safeItem;
+    });
+  }
+
   res.json(items);
 });
 
 // POST API Table Endpoint (Insert Row & triggers)
-app.post('/api/:table', (req, res) => {
+app.post('/api/:table', (req, res, next) => {
+  const table = req.params.table;
+  const publicTables = ['reservations', 'contact_submissions', 'newsletter_signups'];
+  if (publicTables.includes(table)) {
+    return next();
+  }
+  requireAuth(req, res, next);
+}, (req, res) => {
   const table = req.params.table;
   const db = readDB();
 
@@ -345,7 +420,7 @@ app.post('/api/:table', (req, res) => {
 });
 
 // PUT API Table Endpoint (Update Row)
-app.put('/api/:table', (req, res) => {
+app.put('/api/:table', requireAuth, (req, res) => {
   const table = req.params.table;
   const db = readDB();
 
@@ -380,7 +455,7 @@ app.put('/api/:table', (req, res) => {
 });
 
 // DELETE API Table Endpoint (Delete Row)
-app.delete('/api/:table', (req, res) => {
+app.delete('/api/:table', requireAuth, (req, res) => {
   const table = req.params.table;
   const db = readDB();
 
@@ -407,12 +482,207 @@ app.delete('/api/:table', (req, res) => {
 });
 
 // Upload endpoint mimicking Supabase storage uploading
-app.post('/api/storage/upload', upload.single('file'), (req, res) => {
+app.post('/api/storage/upload', requireAuth, upload.single('file'), (req, res) => {
   if (!req.file) {
     return res.status(400).send("No file uploaded.");
   }
   const publicUrl = `/uploads/${req.file.filename}`;
   res.json({ publicUrl });
+});
+
+// ==========================================================================
+// 9. ADMIN PAGES & AUTHENTICATION ENDPOINTS
+// ==========================================================================
+
+// Serve login page
+app.get('/admin/login', (req, res) => {
+  res.sendFile(path.join(__dirname, 'admin_login.html'));
+});
+
+// Protect the admin panel dashboard route
+app.get('/admin', (req, res) => {
+  const session = verifySession(req);
+  if (!session) {
+    return res.redirect('/admin/login');
+  }
+  res.sendFile(path.join(__dirname, 'private', 'admin_panel.html'));
+});
+
+// Login endpoint (handles Supabase JWT exchange & local mock fallback)
+app.post('/api/auth/login', (req, res) => {
+  const { email, password, token } = req.body || {};
+
+  if (token) {
+    // Supabase Auth token session creation (cookie storage)
+    res.cookie('admin_session', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    });
+    return res.json({ success: true });
+  }
+
+  // Local dev mock credentials check
+  if (email === 'admin@pinkandbluecafe.com' && password === 'password') {
+    const mockToken = jwt.sign(
+      { email, role: 'authenticated' },
+      MOCK_JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+    res.cookie('admin_session', mockToken, {
+      httpOnly: true,
+      secure: false, // Local HTTP is safe in dev
+      sameSite: 'lax',
+      maxAge: 24 * 60 * 60 * 1000
+    });
+    return res.json({ success: true });
+  }
+
+  res.status(401).send("Invalid credentials.");
+});
+
+// Logout endpoint
+app.post('/api/auth/logout', (req, res) => {
+  res.clearCookie('admin_session');
+  res.json({ success: true });
+});
+
+// ==========================================================================
+// 10. AI MENU SCANNER PROXY ENDPOINT
+// ==========================================================================
+
+function getMockScanResults() {
+  return [
+    {
+      category: "Pizza",
+      name: "Woodfired Garlic Mushroom Pizza",
+      description: "Fresh button mushrooms, truffle oil, and roasted garlic cream cheese burst.",
+      price_small: 189,
+      price_medium: 349,
+      price_large: 459,
+      price_xxxl: null,
+      is_veg: true,
+      is_spicy: false,
+      is_must_try: true,
+      confidence: 0.95
+    },
+    {
+      category: "Pizza",
+      name: "Veg Supreme Pizza",
+      description: "Classic pizza loaded with bell peppers, onion, sweet corn and mozzarella.",
+      price_small: 169,
+      price_medium: 329,
+      price_large: 429,
+      price_xxxl: null,
+      is_veg: true,
+      is_spicy: false,
+      is_must_try: false,
+      confidence: 0.90
+    },
+    {
+      category: "Sandwiches",
+      name: "Pink Paradise Burger",
+      description: "Beetroot-dyed soft pink buns, crispy vegetable patty, and signature herb cream sauce.",
+      price_small: null,
+      price_medium: 169,
+      price_large: null,
+      price_xxxl: null,
+      is_veg: true,
+      is_spicy: false,
+      is_must_try: true,
+      confidence: 0.88
+    },
+    {
+      category: "Drinks",
+      name: "Fior di Latte Shake",
+      description: "Sweet milk cream base whipped with roasted vanilla pod syrup.",
+      price_small: null,
+      price_medium: 149,
+      price_large: 199,
+      price_xxxl: null,
+      is_veg: true,
+      is_spicy: false,
+      is_must_try: false,
+      confidence: 0.72
+    }
+  ];
+}
+
+async function callGeminiVisionAPI(base64Data, geminiKey) {
+  const apiURL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`;
+  const requestBody = {
+    contents: [
+      {
+        parts: [
+          {
+            text: `Extract all menu items from this printed menu photo page. Output ONLY a raw JSON array. DO NOT wrap it in markdown block fences. Each object in the array MUST have these keys:
+- category: string (the category name e.g. 'Pizza', 'Sandwiches', 'Shakes')
+- name: string (the item name)
+- description: string (the descriptions if listed, otherwise null)
+- price_small: number or null (small size cost)
+- price_medium: number or null (medium size cost)
+- price_large: number or null (large size cost)
+- price_xxxl: number or null (xxxl drinks cost)
+- is_veg: boolean (true if veg / green dot, false if contains meat)
+- is_spicy: boolean (true if spicy, else false)
+- is_must_try: boolean (true if signature / crown tag, else false)
+- confidence: number (from 0.0 to 1.0, representing text clarity)`
+          },
+          {
+            inlineData: {
+              mimeType: "image/jpeg",
+              data: base64Data
+            }
+          }
+        ]
+      }
+    ],
+    generationConfig: {
+      responseMimeType: "application/json"
+    }
+  };
+
+  const response = await fetch(apiURL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(requestBody)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Google API responded with status ${response.status}`);
+  }
+
+  const data = await response.json();
+  const contentText = data.candidates[0].content.parts[0].text;
+  return JSON.parse(contentText);
+}
+
+app.post('/api/scan-menu', requireAuth, async (req, res) => {
+  const { images } = req.body;
+  if (!images || !Array.isArray(images)) {
+    return res.status(400).send("No images provided.");
+  }
+
+  const geminiKey = process.env.GEMINI_API_KEY;
+  if (!geminiKey) {
+    console.log("Gemini API key environment variable is blank. Running simulation mode...");
+    // Artificial delay to make simulation feel authentic
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    return res.json({ success: true, simulated: true, items: getMockScanResults() });
+  }
+
+  try {
+    const results = [];
+    for (let i = 0; i < images.length; i++) {
+      const pageData = await callGeminiVisionAPI(images[i], geminiKey);
+      results.push(...pageData);
+    }
+    res.json({ success: true, simulated: false, items: results });
+  } catch (err) {
+    console.error("Gemini Vision processing failed:", err);
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 // Serve frontend static files
