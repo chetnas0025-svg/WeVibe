@@ -1139,12 +1139,17 @@ app.post('/api/scan-menu', requireAuth, async (req, res) => {
 });
 
 // Serve frontend static files
-app.use(express.static(__dirname));
-
-// Direct fallback to index.html for routing
-app.get(/^(?!\/api).*/, (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
+if (fs.existsSync(path.join(__dirname, 'dist'))) {
+  app.use(express.static(path.join(__dirname, 'dist')));
+  app.get(/^(?!\/api).*/, (req, res) => {
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+  });
+} else {
+  app.use(express.static(__dirname));
+  app.get(/^(?!\/api).*/, (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+  });
+}
 
 // Start Express server
 app.listen(PORT, () => {
