@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { Sparkles, Calendar, Utensils, Star, Coffee, ShieldCheck, Heart, ArrowRight } from 'lucide-react';
 
@@ -55,7 +55,7 @@ export default function Home() {
   ];
 
   return (
-    <div className="space-y-20 pb-20">
+    <div className="space-y-20 pb-20 animate-fadeIn">
       
       {/* HERO SECTION */}
       <section className="relative min-h-[85vh] flex items-center justify-center bg-espresso-900 text-cream-50 overflow-hidden">
@@ -70,7 +70,7 @@ export default function Home() {
         </div>
 
         <div className="relative z-10 max-w-5xl mx-auto px-4 text-center space-y-6 pt-12">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gold/20 border border-gold/40 text-gold-light text-xs font-semibold uppercase tracking-widest backdrop-blur-md">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gold/20 border border-gold/40 text-gold-light text-xs font-semibold uppercase tracking-widest backdrop-blur-md animate-pulse">
             <Sparkles className="w-3.5 h-3.5" /> Welcome to We Vibes Cafe
           </div>
           
@@ -86,14 +86,14 @@ export default function Home() {
           <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
               to="/reserve"
-              className="w-full sm:w-auto px-8 py-4 rounded-full bg-gradient-to-r from-gold to-gold-dark hover:from-gold-dark hover:to-gold text-white font-semibold text-base shadow-xl hover:shadow-2xl transition-all transform hover:-translate-y-1 flex items-center justify-center gap-2"
+              className="w-full sm:w-auto px-8 py-4 rounded-full bg-gradient-to-r from-gold to-gold-dark hover:from-gold-dark hover:to-gold text-white font-semibold text-base shadow-xl hover:shadow-2xl transition-all transform hover:-translate-y-1 animate-glow flex items-center justify-center gap-2"
             >
               <Calendar className="w-5 h-5" />
               <span>Book a Table</span>
             </Link>
             <Link
               to="/menu"
-              className="w-full sm:w-auto px-8 py-4 rounded-full bg-white/10 hover:bg-white/20 text-cream-50 font-medium text-base border border-white/20 backdrop-blur-md transition-all flex items-center justify-center gap-2"
+              className="w-full sm:w-auto px-8 py-4 rounded-full bg-white/10 hover:bg-white/20 text-cream-50 font-medium text-base border border-white/20 backdrop-blur-md transition-all flex items-center justify-center gap-2 hover:scale-105"
             >
               <Utensils className="w-5 h-5" />
               <span>Explore Menu</span>
@@ -105,7 +105,7 @@ export default function Home() {
       {/* FEATURES HIGHLIGHT */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="p-8 rounded-3xl bg-white border border-gold/20 shadow-lg hover:shadow-xl transition-all space-y-4 group">
+          <div className="p-8 rounded-3xl bg-white border border-gold/20 shadow-lg card-hover-effect space-y-4 group">
             <div className="w-14 h-14 rounded-2xl bg-gold-light/20 text-gold-dark flex items-center justify-center group-hover:scale-110 transition-transform">
               <Coffee className="w-7 h-7" />
             </div>
@@ -115,7 +115,7 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="p-8 rounded-3xl bg-white border border-gold/20 shadow-lg hover:shadow-xl transition-all space-y-4 group">
+          <div className="p-8 rounded-3xl bg-white border border-gold/20 shadow-lg card-hover-effect space-y-4 group">
             <div className="w-14 h-14 rounded-2xl bg-gold-light/20 text-gold-dark flex items-center justify-center group-hover:scale-110 transition-transform">
               <Utensils className="w-7 h-7" />
             </div>
@@ -125,7 +125,7 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="p-8 rounded-3xl bg-white border border-gold/20 shadow-lg hover:shadow-xl transition-all space-y-4 group">
+          <div className="p-8 rounded-3xl bg-white border border-gold/20 shadow-lg card-hover-effect space-y-4 group">
             <div className="w-14 h-14 rounded-2xl bg-gold-light/20 text-gold-dark flex items-center justify-center group-hover:scale-110 transition-transform">
               <ShieldCheck className="w-7 h-7" />
             </div>
@@ -149,15 +149,15 @@ export default function Home() {
           {signatureDishes.map((item) => (
             <div
               key={item.id}
-              className="bg-white rounded-3xl overflow-hidden border border-gold/20 shadow-lg hover:shadow-2xl transition-all duration-300 group flex flex-col justify-between"
+              className="bg-white rounded-3xl overflow-hidden border border-gold/20 shadow-lg card-hover-effect group flex flex-col justify-between"
             >
               <div className="relative h-64 overflow-hidden bg-cream-100">
                 <img
                   src={item.image}
                   alt={item.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                 />
-                <div className="absolute top-4 right-4 px-3 py-1 rounded-full bg-white/90 backdrop-blur-md text-gold-dark font-bold text-sm shadow-md">
+                <div className="absolute top-4 right-4 px-3.5 py-1 rounded-full bg-white/90 backdrop-blur-md text-gold-dark font-bold text-sm shadow-md">
                   {item.price}
                 </div>
               </div>
@@ -178,7 +178,7 @@ export default function Home() {
                   </div>
                   <Link
                     to="/menu"
-                    className="text-gold-dark hover:text-gold font-medium text-sm flex items-center gap-1 transition-colors"
+                    className="text-gold-dark hover:text-gold font-medium text-sm flex items-center gap-1 transition-colors group-hover:translate-x-1"
                   >
                     View Details <ArrowRight className="w-4 h-4" />
                   </Link>
@@ -200,7 +200,7 @@ export default function Home() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {testimonials.map((t, idx) => (
-              <div key={idx} className="p-8 rounded-3xl bg-espresso-800/80 border border-gold-dark/20 space-y-4">
+              <div key={idx} className="p-8 rounded-3xl bg-espresso-800/80 border border-gold-dark/20 space-y-4 card-hover-effect">
                 <div className="flex text-gold">
                   {[...Array(t.rating)].map((_, i) => (
                     <Star key={i} className="w-4 h-4 fill-gold" />
@@ -219,7 +219,7 @@ export default function Home() {
 
       {/* CTA BANNER */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="rounded-3xl bg-gradient-to-r from-gold-dark via-gold to-gold-dark p-10 sm:p-14 text-white text-center space-y-6 shadow-2xl relative overflow-hidden">
+        <div className="rounded-3xl bg-gradient-to-r from-gold-dark via-gold to-gold-dark p-10 sm:p-14 text-white text-center space-y-6 shadow-2xl relative overflow-hidden animate-glow">
           <h2 className="font-serif text-3xl sm:text-5xl font-bold leading-tight">
             Reserve Your Table at We Vibes Cafe
           </h2>
