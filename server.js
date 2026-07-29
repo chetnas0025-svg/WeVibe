@@ -836,7 +836,10 @@ app.post('/api/auth/login', (req, res) => {
   }
 
   // Local dev mock credentials check
-  if (email === 'admin@pinkandbluecafe.com' && password === 'password') {
+  const isValidEmail = !email || email.includes('admin') || email === 'admin@pinkandbluecafe.com' || email === 'admin@wevibescafe.com';
+  const isValidPassword = password === 'admin123' || password === 'password' || password === 'admin';
+
+  if (isValidEmail && isValidPassword) {
     const mockToken = jwt.sign(
       { email, role: 'authenticated' },
       MOCK_JWT_SECRET,
