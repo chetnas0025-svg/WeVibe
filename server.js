@@ -7,11 +7,64 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
+const nodemailer = require('nodemailer');
 
 const app = express();
 const PORT = process.env.PORT || 8000;
 const DB_FILE = path.join(__dirname, 'db.json');
 const UPLOADS_DIR = path.join(__dirname, 'uploads');
+
+const { Pool } = require('pg');
+const { createClient } = require('@supabase/supabase-js');
+
+// Initialize PostgreSQL connection pool if DATABASE_URL is set
+let pgPool = null;
+if (process.env.DATABASE_URL) {
+  console.log("DATABASE_URL env variable detected. Connecting to PostgreSQL database...");
+  pgPool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: {
+      rejectUnauthorized: false
+    }
+  });
+  
+  // Test connection
+  pgPool.query('SELECT NOW()', (err, res) => {
+    if (err) {
+      console.error("❌ Failed to connect to PostgreSQL database via pool:", err.message);
+    } else {
+      console.log("✅ Successfully connected to PostgreSQL database at:", res.rows[0].now);
+    }
+  });
+} else {
+  console.log("No DATABASE_URL environment variable detected. Running in JSON file database mode (db.json).");
+}
+
+// Initialize Supabase Client on the backend for Storage uploads
+let supabaseClient = null;
+const supabaseConfigPath = path.join(__dirname, 'supabase_config.json');
+let supabaseUrl = null;
+let supabaseKey = null;
+
+if (fs.existsSync(supabaseConfigPath)) {
+  try {
+    const config = JSON.parse(fs.readFileSync(supabaseConfigPath, 'utf8'));
+    supabaseUrl = config.SUPABASE_URL;
+    // Use service role key if available in env, otherwise fallback to anon key from config
+    supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || config.SUPABASE_ANON_KEY;
+  } catch (err) {
+    console.error("Error reading supabase_config.json:", err.message);
+  }
+}
+
+if (supabaseUrl && supabaseUrl !== "https://your-supabase-url.supabase.co" && supabaseKey) {
+  try {
+    supabaseClient = createClient(supabaseUrl, supabaseKey);
+    console.log("✅ Supabase client initialized on backend.");
+  } catch (err) {
+    console.error("❌ Failed to initialize Supabase client on backend:", err.message);
+  }
+}
 
 // Ensure uploads folder exists
 if (!fs.existsSync(UPLOADS_DIR)) {
@@ -213,23 +266,36 @@ function seedInitialData() {
   // Seed default configuration settings
   const seededSettings = {
     id: "00000000-0000-0000-0000-000000000000",
-    address: "220-B, Satiya Wala Mandir Road, Model Town, Karnal, Haryana 132001",
-    map_embed_url: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3464.7107770857317!2d76.97495097629555!3d29.699144475101672!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x390e7195dfb8243b%3A0xe9f7bf9c855a0b73!2sSatiya%20Wala%20Mandir%20Road%2C%20Model%20Town%2C%20Karnal%2C%20Haryana%20132001!5e0!3m2!1sen!2sin!4v1711200000000!5m2!1sen!2sin",
-    phone: "+91-9991110124",
-    whatsapp_number: "+91-9991110124",
-    email: "info@pinkandbluecafe.com",
+    address: "",
+    map_embed_url: "",
+    phone: "8950191495",
+    whatsapp_number: "8950191495",
+    email: "zato08100@gmail.com",
     instagram_url: "https://instagram.com",
     facebook_url: "https://facebook.com",
     hours_json: {
-      mon: "11:00 AM to 10:15 PM",
-      tue: "11:00 AM to 10:15 PM",
-      wed: "11:00 AM to 10:15 PM",
-      thu: "11:00 AM to 10:15 PM",
-      fri: "11:00 AM to 10:15 PM",
-      sat: "11:00 AM to 10:15 PM",
-      sun: "11:00 AM to 10:15 PM"
+      mon: "10:00 AM to 10:00 PM",
+      tue: "10:00 AM to 10:00 PM",
+      wed: "10:00 AM to 10:00 PM",
+      thu: "10:00 AM to 10:00 PM",
+      fri: "10:00 AM to 10:00 PM",
+      sat: "10:00 AM to 10:00 PM",
+      sun: "10:00 AM to 10:00 PM"
     },
     gemini_api_key: null,
+    theme_name: "pink_paradise",
+    custom_primary_pink: "#F2A6C4",
+    custom_accent_magenta: "#E6007E",
+    custom_bg_blush: "#FADDE8",
+    custom_bg_blush_light: "#FEF6F9",
+    custom_navy_dark: "#1B2A4A",
+    font_heading: "Outfit",
+    font_body: "Inter",
+    logo_text: "We Vibes",
+    enable_blossom: true,
+    hero_title_line1: "Italian Cuisine",
+    hero_title_line2: "With a Twist",
+    hero_description: "Enter a dreamy pastel paradise under glowing lanterns and cherry-blossoms, where plates look like art and food tastes like magic.",
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   };
@@ -276,15 +342,128 @@ function seedInitialData() {
   };
 }
 
+const pg = require('pg');
+pg.types.setTypeParser(pg.types.builtins.NUMERIC, val => val === null ? null : parseFloat(val));
+
+const VALID_TABLES = [
+  'categories',
+  'menu_items',
+  'gallery_images',
+  'cafe_settings',
+  'offers',
+  'reservations',
+  'contact_submissions',
+  'newsletter_signups',
+  'guest_reviews'
+];
+
 // GET API Table Endpoints with Query Builder execution
-app.get('/api/:table', (req, res) => {
+app.get('/api/:table', async (req, res) => {
   const table = req.params.table;
-  const db = readDB();
-  
-  if (!db[table]) {
+  if (!VALID_TABLES.includes(table)) {
     return res.status(404).send(`Table ${table} not found.`);
   }
 
+  if (pgPool) {
+    try {
+      let queryText = `SELECT * FROM "${table}" WHERE 1=1`;
+      const queryParams = [];
+      let paramCounter = 1;
+
+      // Handle simple URL query filters (e.g. ?id=...)
+      Object.keys(req.query).forEach(key => {
+        if (key !== 'query') {
+          queryText += ` AND "${key}" = $${paramCounter}`;
+          queryParams.push(req.query[key]);
+          paramCounter++;
+        }
+      });
+
+      let singleVal = false;
+      let limitVal = null;
+      let orderClause = '';
+
+      // Handle advanced query builder JSON payload
+      if (req.query.query) {
+        try {
+          const q = JSON.parse(decodeURIComponent(req.query.query));
+          
+          // Filters
+          if (Array.isArray(q.filters)) {
+            q.filters.forEach(f => {
+              if (f.type === 'eq') {
+                queryText += ` AND "${f.field}" = $${paramCounter}`;
+                queryParams.push(f.value);
+                paramCounter++;
+              } else if (f.type === 'gte') {
+                queryText += ` AND "${f.field}" >= $${paramCounter}`;
+                queryParams.push(f.value);
+                paramCounter++;
+              }
+            });
+          }
+
+          // Sorting
+          if (Array.isArray(q.orders)) {
+            const orderParts = q.orders.map(o => `"${o.field}" ${o.ascending ? 'ASC' : 'DESC'}`);
+            if (orderParts.length > 0) {
+              orderClause = ` ORDER BY ${orderParts.join(', ')}`;
+            }
+          }
+
+          // Limit
+          if (q.limitVal !== null && q.limitVal !== undefined) {
+            limitVal = q.limitVal;
+          }
+
+          // Single row selection
+          if (q.singleVal) {
+            singleVal = true;
+          }
+        } catch (err) {
+          console.error("Query parse error:", err);
+          return res.status(400).send("Query parse error");
+        }
+      }
+
+      // Append order clause
+      queryText += orderClause;
+
+      // Append limit
+      if (limitVal !== null) {
+        queryText += ` LIMIT ${parseInt(limitVal, 10)}`;
+      } else if (singleVal) {
+        queryText += ` LIMIT 1`;
+      }
+
+      const result = await pgPool.query(queryText, queryParams);
+      let items = result.rows;
+
+      if (singleVal) {
+        const item = items[0] || null;
+        if (item && table === 'cafe_settings' && !verifySession(req)) {
+          const { gemini_api_key, ...safeItem } = item;
+          return res.json(safeItem);
+        }
+        return res.json(item);
+      }
+
+      if (table === 'cafe_settings' && !verifySession(req)) {
+        items = items.map(item => {
+          const { gemini_api_key, ...safeItem } = item;
+          return safeItem;
+        });
+      }
+
+      return res.json(items);
+
+    } catch (dbErr) {
+      console.error(`PostgreSQL query error on table ${table}:`, dbErr.message);
+      return res.status(500).send(`Database error: ${dbErr.message}`);
+    }
+  }
+
+  const db = readDB();
   let items = [...db[table]];
 
   // Handle URL filters directly (e.g. ?id=...)
@@ -369,14 +548,43 @@ app.post('/api/:table', (req, res, next) => {
     return next();
   }
   requireAuth(req, res, next);
-}, (req, res) => {
+}, async (req, res) => {
   const table = req.params.table;
-  const db = readDB();
-
-  if (!db[table]) {
+  if (!VALID_TABLES.includes(table)) {
     return res.status(404).send(`Table ${table} not found.`);
   }
 
+  if (pgPool) {
+    try {
+      const payload = req.body;
+      const id = table === 'cafe_settings' ? '00000000-0000-0000-0000-000000000000' : (payload.id || crypto.randomUUID());
+      
+      const keys = ['id', ...Object.keys(payload).filter(k => k !== 'id')];
+      const values = [id, ...keys.slice(1).map(k => {
+        if (table === 'cafe_settings' && k === 'hours_json' && typeof payload[k] === 'object') {
+          return JSON.stringify(payload[k]);
+        }
+        return payload[k];
+      })];
+      
+      const placeholders = keys.map((_, i) => `$${i + 1}`).join(', ');
+      const queryText = `INSERT INTO "${table}" (${keys.map(k => `"${k}"`).join(', ')}) VALUES (${placeholders}) RETURNING *`;
+      
+      const result = await pgPool.query(queryText, values);
+      return res.status(201).json(result.rows[0]);
+    } catch (dbErr) {
+      console.error(`PostgreSQL insert error on table ${table}:`, dbErr.message);
+      
+      // Translate rate-limit trigger exception to 429
+      if (dbErr.message && dbErr.message.includes('Rate limit exceeded')) {
+        return res.status(429).send(dbErr.message);
+      }
+      
+      return res.status(500).send(`Database error: ${dbErr.message}`);
+    }
+  }
+
+  const db = readDB();
   const payload = req.body;
 
   // Rate Limiting Triggers (Max 5 submissions per hour per user key)
@@ -420,20 +628,65 @@ app.post('/api/:table', (req, res, next) => {
 });
 
 // PUT API Table Endpoint (Update Row)
-app.put('/api/:table', requireAuth, (req, res) => {
+app.put('/api/:table', requireAuth, async (req, res) => {
   const table = req.params.table;
-  const db = readDB();
-
-  if (!db[table]) {
+  if (!VALID_TABLES.includes(table)) {
     return res.status(404).send(`Table ${table} not found.`);
   }
 
-  // Find index using query string filters
+  // Find using query string filters
   const keys = Object.keys(req.query);
   if (keys.length === 0) {
     return res.status(400).send("Update requires a query parameter (e.g. ?id=...)");
   }
 
+  if (pgPool) {
+    try {
+      const updateKeys = Object.keys(req.body).filter(k => k !== 'updated_at');
+      if (updateKeys.length === 0) {
+        return res.status(400).send("Update requires request body fields.");
+      }
+
+      let paramCounter = 1;
+      const setPairs = [];
+      const queryValues = [];
+
+      updateKeys.forEach(k => {
+        let val = req.body[k];
+        if (table === 'cafe_settings' && k === 'hours_json' && typeof val === 'object') {
+          val = JSON.stringify(val);
+        }
+        setPairs.push(`"${k}" = $${paramCounter}`);
+        queryValues.push(val);
+        paramCounter++;
+      });
+
+      if (table !== 'newsletter_signups') {
+        setPairs.push(`"updated_at" = NOW()`);
+      }
+
+      const wherePairs = [];
+      keys.forEach(k => {
+        wherePairs.push(`"${k}" = $${paramCounter}`);
+        queryValues.push(req.query[k]);
+        paramCounter++;
+      });
+
+      const queryText = `UPDATE "${table}" SET ${setPairs.join(', ')} WHERE ${wherePairs.join(' AND ')} RETURNING *`;
+      const result = await pgPool.query(queryText, queryValues);
+
+      if (result.rows.length === 0) {
+        return res.status(404).send("Item matching parameters not found.");
+      }
+
+      return res.json(result.rows[0]);
+    } catch (dbErr) {
+      console.error(`PostgreSQL update error on table ${table}:`, dbErr.message);
+      return res.status(500).send(`Database error: ${dbErr.message}`);
+    }
+  }
+
+  const db = readDB();
   const index = db[table].findIndex(item => {
     return keys.every(key => String(item[key]) === String(req.query[key]));
   });
@@ -455,11 +708,9 @@ app.put('/api/:table', requireAuth, (req, res) => {
 });
 
 // DELETE API Table Endpoint (Delete Row)
-app.delete('/api/:table', requireAuth, (req, res) => {
+app.delete('/api/:table', requireAuth, async (req, res) => {
   const table = req.params.table;
-  const db = readDB();
-
-  if (!db[table]) {
+  if (!VALID_TABLES.includes(table)) {
     return res.status(404).send(`Table ${table} not found.`);
   }
 
@@ -468,6 +719,33 @@ app.delete('/api/:table', requireAuth, (req, res) => {
     return res.status(400).send("Delete requires a query parameter (e.g. ?id=...)");
   }
 
+  if (pgPool) {
+    try {
+      let paramCounter = 1;
+      const wherePairs = [];
+      const queryValues = [];
+
+      keys.forEach(k => {
+        wherePairs.push(`"${k}" = $${paramCounter}`);
+        queryValues.push(req.query[k]);
+        paramCounter++;
+      });
+
+      const queryText = `DELETE FROM "${table}" WHERE ${wherePairs.join(' AND ')} RETURNING *`;
+      const result = await pgPool.query(queryText, queryValues);
+
+      if (result.rows.length === 0) {
+        return res.status(404).send("No matching items found to delete.");
+      }
+
+      return res.json({ success: true });
+    } catch (dbErr) {
+      console.error(`PostgreSQL delete error on table ${table}:`, dbErr.message);
+      return res.status(500).send(`Database error: ${dbErr.message}`);
+    }
+  }
+
+  const db = readDB();
   const beforeLen = db[table].length;
   db[table] = db[table].filter(item => {
     return !keys.every(key => String(item[key]) === String(req.query[key]));
@@ -482,10 +760,44 @@ app.delete('/api/:table', requireAuth, (req, res) => {
 });
 
 // Upload endpoint mimicking Supabase storage uploading
-app.post('/api/storage/upload', requireAuth, upload.single('file'), (req, res) => {
+app.post('/api/storage/upload', requireAuth, upload.single('file'), async (req, res) => {
   if (!req.file) {
     return res.status(400).send("No file uploaded.");
   }
+
+  if (supabaseClient) {
+    try {
+      const fileBuffer = fs.readFileSync(req.file.path);
+      const uniqueName = req.file.filename;
+      
+      const { data, error } = await supabaseClient.storage
+        .from('cafe-uploads')
+        .upload(uniqueName, fileBuffer, {
+          contentType: req.file.mimetype,
+          duplex: 'half'
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      const { data: urlData } = supabaseClient.storage
+        .from('cafe-uploads')
+        .getPublicUrl(uniqueName);
+
+      // Clean up local temp file
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (err) {
+        // Ignore link errors
+      }
+
+      return res.json({ publicUrl: urlData.publicUrl });
+    } catch (err) {
+      console.error("Supabase Storage upload failed, falling back to local:", err.message);
+    }
+  }
+
   const publicUrl = `/uploads/${req.file.filename}`;
   res.json({ publicUrl });
 });
@@ -546,6 +858,127 @@ app.post('/api/auth/login', (req, res) => {
 app.post('/api/auth/logout', (req, res) => {
   res.clearCookie('admin_session');
   res.json({ success: true });
+});
+
+// ==========================================================================
+// 9B. PHONE OTP AUTHENTICATION ENDPOINTS
+// ==========================================================================
+const activeOTPs = {};
+
+app.post('/api/auth/send-otp', async (req, res) => {
+  const { email, phone } = req.body || {};
+  const targetKey = email || phone;
+  if (!targetKey) {
+    return res.status(400).json({ success: false, message: "Email address or phone number is required." });
+  }
+
+  // Generate 6-digit code
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const entry = {
+    otp,
+    expires: Date.now() + 5 * 60 * 1000 // 5 minutes
+  };
+
+  if (email) activeOTPs[email] = entry;
+  if (phone) activeOTPs[phone] = entry;
+
+  let sentRealEmail = false;
+  let previewUrl = null;
+
+  if (email) {
+    try {
+      let transporter;
+      if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+        transporter = nodemailer.createTransport({
+          host: process.env.SMTP_HOST || 'smtp.gmail.com',
+          port: parseInt(process.env.SMTP_PORT || '587', 10),
+          secure: process.env.SMTP_SECURE === 'true',
+          auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS
+          }
+        });
+      } else {
+        const testAccount = await nodemailer.createTestAccount();
+        transporter = nodemailer.createTransport({
+          host: 'smtp.ethereal.email',
+          port: 587,
+          secure: false,
+          auth: {
+            user: testAccount.user,
+            pass: testAccount.pass
+          }
+        });
+      }
+
+      const mailOptions = {
+        from: '"We Vibes Cafe" <reservations@wevibescafe.com>',
+        to: email,
+        subject: `🌸 ${otp} is your We Vibes Cafe Verification Code`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 2px solid #F2A6C4; border-radius: 12px; background-color: #FEF6F9;">
+            <h2 style="color: #1B2A4A; text-align: center; margin-bottom: 5px;">🌸 We Vibes Cafe</h2>
+            <p style="color: #666; text-align: center; font-size: 14px; margin-top: 0;">Table Reservation Verification</p>
+            <hr style="border: none; border-top: 1px dashed #F2A6C4; margin: 20px 0;">
+            <p style="color: #1B2A4A; font-size: 15px;">Hello!</p>
+            <p style="color: #555; font-size: 14px; line-height: 1.5;">Thank you for reserving a table at <strong>We Vibes Cafe</strong>. Use the 6-digit verification code below to confirm your booking:</p>
+            <div style="background-color: #ffffff; border: 2px solid #E6007E; border-radius: 8px; padding: 15px; text-align: center; margin: 25px 0;">
+              <span style="font-size: 32px; font-weight: 800; letter-spacing: 6px; color: #E6007E;">${otp}</span>
+            </div>
+            <p style="color: #888; font-size: 12px; text-align: center;">This code is valid for 5 minutes. If you did not request this, please ignore this email.</p>
+          </div>
+        `
+      };
+
+      const info = await transporter.sendMail(mailOptions);
+      console.log(`=========================================`);
+      console.log(`✉️ [EMAIL SYSTEM] Sent verification code to: ${email}`);
+      console.log(`👉 OTP CODE IS: ${otp}`);
+      if (nodemailer.getTestMessageUrl(info)) {
+        previewUrl = nodemailer.getTestMessageUrl(info);
+        console.log(`🔗 Ethereal Email Preview URL: ${previewUrl}`);
+      }
+      console.log(`=========================================`);
+      sentRealEmail = true;
+    } catch (emailErr) {
+      console.error("Failed to send verification email:", emailErr.message);
+    }
+  }
+
+  return res.json({ 
+    success: true, 
+    otp,
+    real_email_sent: sentRealEmail,
+    preview_url: previewUrl,
+    message: sentRealEmail ? "Verification code sent to your email address!" : "Dev Mode: Verification code generated."
+  });
+});
+
+app.post('/api/auth/verify-otp', (req, res) => {
+  const { email, phone, otp } = req.body || {};
+  const targetKey = email || phone;
+  if (!targetKey || !otp) {
+    return res.status(400).json({ success: false, message: "Email address or phone number and OTP are required." });
+  }
+
+  const entry = activeOTPs[targetKey] || (email && activeOTPs[email]) || (phone && activeOTPs[phone]);
+  if (!entry) {
+    return res.json({ success: false, message: "No OTP verification request found." });
+  }
+
+  if (Date.now() > entry.expires) {
+    if (email) delete activeOTPs[email];
+    if (phone) delete activeOTPs[phone];
+    return res.json({ success: false, message: "Verification code has expired." });
+  }
+
+  if (entry.otp !== otp) {
+    return res.json({ success: false, message: "Invalid verification code." });
+  }
+
+  if (email) delete activeOTPs[email];
+  if (phone) delete activeOTPs[phone];
+  return res.json({ success: true });
 });
 
 // ==========================================================================
@@ -664,9 +1097,26 @@ app.post('/api/scan-menu', requireAuth, async (req, res) => {
     return res.status(400).send("No images provided.");
   }
 
-  const geminiKey = process.env.GEMINI_API_KEY;
+  let geminiKey = process.env.GEMINI_API_KEY;
   if (!geminiKey) {
-    console.log("Gemini API key environment variable is blank. Running simulation mode...");
+    if (pgPool) {
+      try {
+        const result = await pgPool.query('SELECT gemini_api_key FROM cafe_settings LIMIT 1');
+        if (result.rows.length > 0) {
+          geminiKey = result.rows[0].gemini_api_key;
+        }
+      } catch (err) {
+        console.error("Failed to query gemini_api_key from PostgreSQL:", err.message);
+      }
+    } else {
+      const db = readDB();
+      const settings = db.cafe_settings && db.cafe_settings[0];
+      geminiKey = settings && settings.gemini_api_key;
+    }
+  }
+
+  if (!geminiKey) {
+    console.log("Gemini API key environment variable and database settings are blank. Running simulation mode...");
     // Artificial delay to make simulation feel authentic
     await new Promise(resolve => setTimeout(resolve, 3000));
     return res.json({ success: true, simulated: true, items: getMockScanResults() });
@@ -696,7 +1146,7 @@ app.get(/^(?!\/api).*/, (req, res) => {
 // Start Express server
 app.listen(PORT, () => {
   console.log(`===================================================`);
-  console.log(`PINK & BLUE CAFE local API & frontend server running`);
+  console.log(`WE VIBES CAFE local API & frontend server running`);
   console.log(`URL: http://localhost:${PORT}`);
   console.log(`Database File: ${DB_FILE}`);
   console.log(`Uploads Directory: ${UPLOADS_DIR}`);

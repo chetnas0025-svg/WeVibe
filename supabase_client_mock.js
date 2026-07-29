@@ -1,3 +1,5 @@
+const API_BASE = window.location.origin.startsWith('file://') ? 'http://localhost:8000' : '';
+
 class LocalDatabaseClient {
   constructor() {
     this.auth = {
@@ -28,7 +30,7 @@ class LocalDatabaseClient {
             const formData = new FormData();
             formData.append('file', file);
             try {
-              const res = await fetch('/api/storage/upload', {
+              const res = await fetch(API_BASE + '/api/storage/upload', {
                 method: 'POST',
                 body: formData
               });
@@ -83,7 +85,7 @@ class LocalDatabaseClient {
         },
         insert: async (data) => {
           try {
-            const res = await fetch(`/api/${table}`, {
+            const res = await fetch(API_BASE + `/api/${table}`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(Array.isArray(data) ? data[0] : data)
@@ -98,7 +100,7 @@ class LocalDatabaseClient {
           return {
             eq: async (field, value) => {
               try {
-                const res = await fetch(`/api/${table}?${field}=${value}`, {
+                const res = await fetch(API_BASE + `/api/${table}?${field}=${value}`, {
                   method: 'PUT',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify(data)
@@ -115,7 +117,7 @@ class LocalDatabaseClient {
           return {
             eq: async (field, value) => {
               try {
-                const res = await fetch(`/api/${table}?${field}=${value}`, {
+                const res = await fetch(API_BASE + `/api/${table}?${field}=${value}`, {
                   method: 'DELETE'
                 });
                 if (!res.ok) return { data: null, error: new Error(await res.text()) };
@@ -129,7 +131,7 @@ class LocalDatabaseClient {
         then: async (resolve, reject) => {
           try {
             const queryParams = encodeURIComponent(JSON.stringify(queryObj));
-            const res = await fetch(`/api/${table}?query=${queryParams}`);
+            const res = await fetch(API_BASE + `/api/${table}?query=${queryParams}`);
             if (!res.ok) {
               resolve({ data: null, error: new Error(await res.text()) });
               return;

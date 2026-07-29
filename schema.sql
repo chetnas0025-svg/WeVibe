@@ -90,7 +90,10 @@ CREATE TABLE IF NOT EXISTS offers (
 CREATE TABLE IF NOT EXISTS reservations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
+    email TEXT,
     phone TEXT NOT NULL,
+    email_verified BOOLEAN DEFAULT FALSE,
+    phone_verified BOOLEAN DEFAULT FALSE,
     date DATE NOT NULL,
     time TIME NOT NULL,
     party_size INTEGER NOT NULL,
@@ -197,14 +200,14 @@ FOR SELECT TO public USING (bucket_id = 'cafe-uploads');
 INSERT INTO cafe_settings (id, address, map_embed_url, phone, whatsapp_number, email, instagram_url, facebook_url, hours_json)
 VALUES (
     '00000000-0000-0000-0000-000000000000',
-    '220-B, Satiya Wala Mandir Road, Model Town, Karnal, Haryana 132001',
-    'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3464.7107770857317!2d76.97495097629555!3d29.699144475101672!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x390e7195dfb8243b%3A0xe9f7bf9c855a0b73!2sSatiya%20Wala%20Mandir%20Road%2C%20Model%20Town%2C%20Karnal%2C%20Haryana%20132001!5e0!3m2!1sen!2sin!4v1711200000000!5m2!1sen!2sin',
-    '+91-9991110124',
-    '+91-9991110124',
-    'info@pinkandbluecafe.com',
+    '',
+    '',
+    '8950191495',
+    '8950191495',
+    'zato08100@gmail.com',
     'https://instagram.com',
     'https://facebook.com',
-    '{"mon": "11:00 AM to 10:15 PM", "tue": "11:00 AM to 10:15 PM", "wed": "11:00 AM to 10:15 PM", "thu": "11:00 AM to 10:15 PM", "fri": "11:00 AM to 10:15 PM", "sat": "11:00 AM to 10:15 PM", "sun": "11:00 AM to 10:15 PM"}'
+    '{"mon": "10:00 AM to 10:00 PM", "tue": "10:00 AM to 10:00 PM", "wed": "10:00 AM to 10:00 PM", "thu": "10:00 AM to 10:00 PM", "fri": "10:00 AM to 10:00 PM", "sat": "10:00 AM to 10:00 PM", "sun": "10:00 AM to 10:00 PM"}'
 ) ON CONFLICT DO NOTHING;
 
 

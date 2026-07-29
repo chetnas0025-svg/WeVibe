@@ -12,6 +12,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // State variables
   let menuData = null;
   let activeCategoryId = 'all';
+  let disableBlossomAnimation = false;
+  let cachedSettings = null;
+  let lastScrollTop = window.scrollY || document.documentElement.scrollTop;
+  let scrollDeltaY = 0;
+  const API_BASE = window.location.origin.startsWith('file://') ? 'http://localhost:8000' : '';
+  let isVerifying = false;
 
   // DOM Elements
   const header = document.querySelector('.header');
@@ -38,6 +44,27 @@ document.addEventListener('DOMContentLoaded', () => {
   const closeConfirmBtn = document.getElementById('close-confirm-btn');
   const confettiContainer = document.getElementById('confetti-container');
   const reducedMotionToggle = document.getElementById('reduced-motion-toggle');
+
+  // OTP Modal Elements
+  const otpModal = document.getElementById('otp-modal');
+  const otpModalClose = document.getElementById('otp-modal-close');
+  const btnVerifyOtp = document.getElementById('btn-verify-otp');
+  const otpPhoneText = document.getElementById('otp-phone-text');
+  const otpErrorMessage = document.getElementById('otp-error-message');
+  const otpTimerSecs = document.getElementById('otp-timer-secs');
+  const otpTimerContainer = document.getElementById('otp-timer-container');
+  const otpDevHelper = document.getElementById('otp-dev-helper');
+  const otpDevCode = document.getElementById('otp-dev-code');
+  const otpDigits = [
+    document.getElementById('otp-1'),
+    document.getElementById('otp-2'),
+    document.getElementById('otp-3'),
+    document.getElementById('otp-4'),
+    document.getElementById('otp-5'),
+    document.getElementById('otp-6')
+  ];
+  let pendingBooking = null;
+  let otpTimerInterval = null;
 
   /* ==========================================================================
      0. SUPABASE CLIENT INITIALIZATION
@@ -155,13 +182,27 @@ document.addEventListener('DOMContentLoaded', () => {
      2. NAVIGATION & HEADER SCROLL EFFECT
      ========================================================================== */
   window.addEventListener('scroll', () => {
+    // 1. Update Scroll Progress Bar
+    const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
+    if (scrollHeight > 0) {
+      const scrollPercent = (window.scrollY / scrollHeight) * 100;
+      const progressBar = document.getElementById('scroll-progress');
+      if (progressBar) progressBar.style.width = `${scrollPercent}vw`;
+    }
+
+    // 2. Track Scroll Velocity for Petals Parallax
+    const currentScrollTop = window.scrollY || document.documentElement.scrollTop;
+    scrollDeltaY += currentScrollTop - lastScrollTop;
+    lastScrollTop = currentScrollTop;
+
+    // 3. Header Scrolled Class
     if (window.scrollY > 50) {
       header.classList.add('scrolled');
     } else {
       header.classList.remove('scrolled');
     }
     
-    // Auto-highlight nav links during scroll
+    // 4. Auto-highlight nav links during scroll
     let currentSectionId = '';
     const sections = document.querySelectorAll('section');
     sections.forEach(section => {
@@ -181,6 +222,12 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
   });
+
+  // Ticker to decay scroll velocity for petals
+  setInterval(() => {
+    scrollDeltaY *= 0.85;
+    if (Math.abs(scrollDeltaY) < 0.1) scrollDeltaY = 0;
+  }, 30);
 
   // Mobile navigation curtain toggle
   if (navToggle) {
@@ -204,7 +251,7 @@ document.addEventListener('DOMContentLoaded', () => {
      3. FLOATING CHERRY BLOSSOM PETALS
      ========================================================================== */
   function initBlossomPetals() {
-    if (document.body.classList.contains('reduced-motion')) return;
+    if (document.body.classList.contains('reduced-motion') || disableBlossomAnimation) return;
     
     blossomContainer.innerHTML = '';
     const petalCount = 18;
@@ -215,7 +262,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Periodically spawn new petals to keep falling loop organic
     setInterval(() => {
-      if (document.body.classList.contains('reduced-motion')) return;
+      if (document.body.classList.contains('reduced-motion') || disableBlossomAnimation) return;
       if (blossomContainer.children.length < 25) {
         createPetal(false);
       }
@@ -261,12 +308,15 @@ document.addEventListener('DOMContentLoaded', () => {
     blossomContainer.appendChild(petal);
 
     function fallStep() {
-      if (document.body.classList.contains('reduced-motion') || !petal.parentNode) {
+      if (document.body.classList.contains('reduced-motion') || disableBlossomAnimation || !petal.parentNode) {
         if (petal.parentNode) petal.remove();
         return;
       }
 
-      posY += speedY;
+      // Parallax scroll velocity physics
+      posY += speedY - (scrollDeltaY * 0.12);
+      posX -= (scrollDeltaY * 0.05);
+
       angle += wobbleSpeed;
       const currentX = posX + Math.sin(angle) * (swingRange / 10) + (speedX * posY / 10);
       rotation += spinSpeed;
@@ -421,7 +471,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       } else {
         console.log("Supabase Client unconfigured. Falling back to local static JSON.");
-        const response = await fetch('menu.json');
+        const response = await fetch(API_BASE + '/menu.json');
         if (!response.ok) throw new Error('Failed to load menu.json');
         menuData = await response.json();
       }
@@ -452,42 +502,153 @@ document.addEventListener('DOMContentLoaded', () => {
       if (error) throw error;
       if (!data) return;
 
-      // Update phone href and numbers
+      cachedSettings = data;
+
+      // 1. Update contact details
       const phoneLinks = document.querySelectorAll('a[href^="tel:"]');
       phoneLinks.forEach(link => {
         link.setAttribute('href', `tel:${data.phone}`);
         link.textContent = data.phone;
       });
 
-      // Update address texts
       const addressTexts = document.querySelectorAll('.contact-details-box p, .footer-col-contact p');
       addressTexts.forEach(p => {
         if (p.innerHTML.includes('Address:')) {
-          p.innerHTML = `<strong>Address:</strong> ${data.address}`;
+          if (!data.address) {
+            const contactLine = p.closest('.contact-line');
+            if (contactLine) contactLine.style.display = 'none';
+          } else {
+            p.innerHTML = `<strong>Address:</strong> ${data.address}`;
+            const contactLine = p.closest('.contact-line');
+            if (contactLine) contactLine.style.display = '';
+          }
+        } else if (p.closest('.footer-col-contact') && p.innerHTML.includes('map-pin')) {
+          if (!data.address) {
+            p.style.display = 'none';
+          } else {
+            p.style.display = '';
+            p.innerHTML = `<i data-lucide="map-pin" class="text-pink"></i> ${data.address}`;
+            if (window.lucide) window.lucide.createIcons();
+          }
         }
       });
 
-      // Update map embed URL
+      // Handle map and section layout if address is empty
+      const mapCol = document.querySelector('.location-map');
+      if (mapCol) {
+        if (!data.address) {
+          mapCol.style.display = 'none';
+          const locGrid = document.querySelector('.location-grid');
+          if (locGrid) {
+            locGrid.style.gridTemplateColumns = '1fr';
+            locGrid.style.maxWidth = '800px';
+            locGrid.style.margin = '0 auto';
+          }
+          const locText = document.querySelector('.location-text');
+          if (locText) {
+            locText.textContent = "Have a question, feedback, or want to order directly? Reach out to us via phone, email, or send a message below!";
+          }
+          const locTitle = document.querySelector('.location-section .section-title');
+          if (locTitle) locTitle.textContent = "Get in Touch";
+          const locTag = document.querySelector('.location-section .section-tag');
+          if (locTag) locTag.textContent = "📞 Contact Us";
+        } else {
+          mapCol.style.display = '';
+          const locGrid = document.querySelector('.location-grid');
+          if (locGrid) {
+            locGrid.style.gridTemplateColumns = '';
+            locGrid.style.maxWidth = '';
+            locGrid.style.margin = '';
+          }
+        }
+      }
+
       const mapIframe = document.querySelector('.location-map iframe');
       if (mapIframe && data.map_embed_url) {
         mapIframe.setAttribute('src', data.map_embed_url);
       }
 
-      // Update whatsapp action links
       const waActionLink = document.querySelector('a[href*="wa.me"]');
       if (waActionLink && data.whatsapp_number) {
         const cleanNumber = data.whatsapp_number.replace(/[^0-9]/g, '');
-        waActionLink.setAttribute('href', `https://wa.me/${cleanNumber}?text=Hi%20Pink%20and%20Blue%20Cafe%21%20I%20would%20like%20to%20place%20an%20order%20for%20pickup.`);
+        waActionLink.setAttribute('href', `https://wa.me/${cleanNumber}?text=Hi%20${encodeURIComponent(data.logo_text || 'We Vibes')}!%20I%20would%20like%20to%20place%20an%20order%20for%20pickup.`);
       }
 
-      // Update operational hours dynamically from settings hours_json
       const hoursElements = document.querySelectorAll('.contact-line p');
       hoursElements.forEach(p => {
         if (p.innerHTML.includes('Hours:')) {
           const hours = data.hours_json;
-          p.innerHTML = `<strong>Hours:</strong> Open Daily from ${hours.mon || '11:00 AM to 10:15 PM'}`;
+          p.innerHTML = `<strong>Hours:</strong> Open Daily from ${hours.mon || '10:00 AM to 10:00 PM'}`;
         }
       });
+
+      // 2. Apply Custom Colors Dynamic Style overrides
+      let styleEl = document.getElementById('theme-style-overrides');
+      if (!styleEl) {
+        styleEl = document.createElement('style');
+        styleEl.id = 'theme-style-overrides';
+        document.head.appendChild(styleEl);
+      }
+      styleEl.innerHTML = `
+        :root {
+          --primary-pink: ${data.custom_primary_pink || '#F2A6C4'};
+          --accent-magenta: ${data.custom_accent_magenta || '#E6007E'};
+          --bg-blush: ${data.custom_bg_blush || '#FADDE8'};
+          --bg-blush-light: ${data.custom_bg_blush_light || '#FEF6F9'};
+          --navy-dark: ${data.custom_navy_dark || '#1B2A4A'};
+          --font-title: '${data.font_heading || 'Outfit'}', sans-serif;
+          --font-body: '${data.font_body || 'Inter'}', sans-serif;
+        }
+      `;
+
+      // 3. Inject Dynamic Google Fonts
+      if (data.font_heading || data.font_body) {
+        const fonts = [];
+        if (data.font_heading) fonts.push(data.font_heading);
+        if (data.font_body) fonts.push(data.font_body);
+        let fontLink = document.getElementById('google-fonts-theme-link');
+        if (!fontLink) {
+          fontLink = document.createElement('link');
+          fontLink.id = 'google-fonts-theme-link';
+          fontLink.rel = 'stylesheet';
+          document.head.appendChild(fontLink);
+        }
+        fontLink.href = `https://fonts.googleapis.com/css2?family=${fonts.map(f => f.replace(' ', '+')).join('&family=')}:wght@300;400;500;600;700;800&display=swap`;
+      }
+
+      // 4. Update Branding Logo Texts
+      if (data.logo_text) {
+        document.querySelectorAll('.logo-text .brand-title').forEach(el => {
+          el.textContent = data.logo_text;
+        });
+        document.title = `${data.logo_text} Cafe | Best Italian Cuisine with a Twist in Karnal`;
+      }
+
+      // 5. Update Hero Banner content
+      const heroTitleEl = document.getElementById('hero-title');
+      if (heroTitleEl) {
+        heroTitleEl.innerHTML = `
+          <span>${data.hero_title_line1 || 'Italian Cuisine'}</span>
+          <span class="highlight-text-navy">${data.hero_title_line2 || 'With a Twist'}</span>
+        `;
+      }
+      const heroDescEl = document.querySelector('.hero-description');
+      if (heroDescEl && data.hero_description) {
+        heroDescEl.textContent = data.hero_description;
+      }
+
+      // 6. Toggle Blossom Petal Fall Animation loop
+      if (data.enable_blossom === false) {
+        disableBlossomAnimation = true;
+        const container = document.getElementById('blossom-container');
+        if (container) container.innerHTML = '';
+      } else {
+        const wasDisabled = disableBlossomAnimation === true;
+        disableBlossomAnimation = false;
+        if (wasDisabled) {
+          initBlossomPetals();
+        }
+      }
       
     } catch (e) {
       console.warn("Global settings loading error:", e);
@@ -513,12 +674,12 @@ document.addEventListener('DOMContentLoaded', () => {
       let galleryHTML = '';
       data.forEach((img, index) => {
         galleryHTML += `
-          <div class="gallery-item scroll-reveal active" data-src="${img.image_url}" data-title="${img.caption || 'Pink & Blue Cafe'}" data-desc="Gallery Capture">
-            <img src="${img.image_url}" alt="${img.caption || 'Pink & Blue Cafe Image'}">
+          <div class="gallery-item scroll-reveal active" data-src="${img.image_url}" data-title="${img.caption || 'We Vibess Cafe'}" data-desc="Gallery Capture">
+            <img src="${img.image_url}" alt="${img.caption || 'We Vibess Cafe Image'}">
             <div class="gallery-overlay">
               <i data-lucide="zoom-in" class="zoom-icon"></i>
               <div class="gallery-info-text">
-                <h3>${img.caption || 'Pink & Blue Cafe'}</h3>
+                <h3>${img.caption || 'We Vibess Cafe'}</h3>
                 <p>Gallery Image</p>
               </div>
             </div>
@@ -539,7 +700,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (src && lightbox) {
             lightboxImage.setAttribute('src', src);
             lightboxImage.setAttribute('alt', title || 'Cafe view');
-            lightboxTitle.textContent = title || 'Pink & Blue Cafe';
+            lightboxTitle.textContent = title || 'We Vibess Cafe';
             lightboxDesc.textContent = desc || 'Romantic Ambience';
             
             lightbox.classList.add('active');
@@ -755,7 +916,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentAnonKey = SUPABASE_ANON_KEY;
 
     try {
-      const response = await fetch('supabase_config.json');
+      const response = await fetch(API_BASE + '/supabase_config.json');
       if (response.ok) {
         const config = await response.json();
         if (config.SUPABASE_URL && config.SUPABASE_ANON_KEY) {
@@ -786,6 +947,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     await loadMenu();
+    await loadGuestReviews();
+
+    // Set minimum reservation date to today in local time
+    const bookingDateInput = document.getElementById('booking-date');
+    if (bookingDateInput) {
+      const todayStr = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD format in local time
+      bookingDateInput.setAttribute('min', todayStr);
+    }
   }
 
   initApplication();
@@ -808,6 +977,7 @@ document.addEventListener('DOMContentLoaded', () => {
       threshold: 0.1,
       rootMargin: '0px 0px -50px 0px'
     });
+    window.revealObserver = revealObserver;
 
     revealElements.forEach(el => revealObserver.observe(el));
   } else {
@@ -829,7 +999,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (src && lightbox) {
         lightboxImage.setAttribute('src', src);
         lightboxImage.setAttribute('alt', title || 'Cafe view');
-        lightboxTitle.textContent = title || 'Pink & Blue Cafe';
+        lightboxTitle.textContent = title || 'We Vibess Cafe';
         lightboxDesc.textContent = desc || 'Romantic Ambience';
         
         lightbox.classList.add('active');
@@ -866,6 +1036,256 @@ document.addEventListener('DOMContentLoaded', () => {
   /* ==========================================================================
      8. RESERVATIONS & HEART CONFETTI DISPATCH (Supabase Insert)
      ========================================================================== */
+  /* ==========================================================================
+     8. RESERVATIONS & PHONE OTP AUTHENTICATION & CONFETTI (Supabase Insert)
+     ========================================================================== */
+  
+  // Close OTP Modal
+  function closeOtpModal() {
+    if (otpModal) {
+      otpModal.classList.remove('active');
+      clearInterval(otpTimerInterval);
+    }
+  }
+
+  if (otpModalClose) otpModalClose.addEventListener('click', closeOtpModal);
+
+  // OTP Digits Focus-shifting & Input Filter
+  otpDigits.forEach((input, index) => {
+    if (!input) return;
+    
+    // Only allow numeric input
+    input.addEventListener('keypress', (e) => {
+      if (e.key < '0' || e.key > '9') {
+        e.preventDefault();
+      }
+    });
+
+    input.addEventListener('input', (e) => {
+      const val = input.value;
+      
+      // Filter out non-numbers just in case
+      input.value = val.replace(/[^0-9]/g, '');
+
+      // Focus next box
+      if (input.value.length === 1 && index < otpDigits.length - 1) {
+        otpDigits[index + 1].focus();
+      }
+      
+      // Auto-trigger verify if all 4 digit boxes are filled
+      const filledAll = otpDigits.every(el => el.value.length === 1);
+      if (filledAll) {
+        verifyBookingOTP();
+      }
+    });
+
+    input.addEventListener('keydown', (e) => {
+      // Focus previous on backspace if current is empty
+      if (e.key === 'Backspace' && input.value === '' && index > 0) {
+        otpDigits[index - 1].focus();
+        otpDigits[index - 1].value = ''; // Clear it out
+      }
+    });
+  });
+
+  // Start OTP Timer Countdown
+  function startOtpTimer() {
+    clearInterval(otpTimerInterval);
+    let secondsLeft = 59;
+    otpTimerSecs.textContent = secondsLeft;
+    otpTimerContainer.innerHTML = `Resend code in <span id="otp-timer-secs" style="font-weight: 600; color: var(--accent-magenta);">${secondsLeft}</span>s`;
+
+    otpTimerInterval = setInterval(() => {
+      secondsLeft--;
+      const secsEl = document.getElementById('otp-timer-secs');
+      if (secsEl) secsEl.textContent = secondsLeft;
+
+      if (secondsLeft <= 0) {
+        clearInterval(otpTimerInterval);
+        otpTimerContainer.innerHTML = `<button id="btn-resend-otp" class="link-btn" style="color: var(--accent-magenta); background: none; border: none; font-weight: 600; text-decoration: underline; cursor: pointer;">Resend Verification Code</button>`;
+        const resendBtn = document.getElementById('btn-resend-otp');
+        if (resendBtn) {
+          resendBtn.addEventListener('click', async () => {
+            await sendReservationOTP(pendingBooking.phone);
+          });
+        }
+      }
+    }, 1000);
+  }
+
+  // Request OTP from backend API
+  async function sendReservationOTP(email, phone) {
+    try {
+      const response = await fetch(API_BASE + '/api/auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, phone })
+      });
+      const data = await response.json();
+      
+      if (data.success) {
+        // Populate Phone/Email details
+        const displayTarget = email || phone;
+        otpPhoneText.innerHTML = `We've sent a 6-digit verification code to your email address:<br><strong style="color: var(--navy-dark);">${displayTarget}</strong>`;
+        
+        // Show OTP code / Ethereal preview link in Dev Mode helper
+        if (data.real_email_sent && !data.preview_url) {
+          otpDevHelper.style.display = 'none';
+        } else if (data.preview_url) {
+          otpDevHelper.innerHTML = `✉️ Ethereal Email Preview: <a href="${data.preview_url}" target="_blank" style="color: var(--accent-magenta); font-weight: 800; text-decoration: underline;">Click here to view your sent email</a> (Code: <strong>${data.otp}</strong>)`;
+          otpDevHelper.style.display = 'block';
+        } else {
+          otpDevCode.textContent = data.otp;
+          otpDevHelper.style.display = 'block';
+        }
+
+        // Clear digits
+        otpDigits.forEach(input => {
+          if (input) {
+            input.value = '';
+            input.classList.remove('error');
+          }
+        });
+        otpErrorMessage.style.display = 'none';
+
+        // Open Modal
+        otpModal.classList.add('active');
+        startOtpTimer();
+        
+        // Focus first box
+        setTimeout(() => {
+          if (otpDigits[0]) otpDigits[0].focus();
+        }, 100);
+      } else {
+        alert(data.message || "Failed to send verification code. Please try again.");
+      }
+    } catch (err) {
+      console.error("OTP send request failed:", err);
+      alert("Verification server connection failed. Please try booking directly via WhatsApp.");
+    }
+  }
+
+  // Validate OTP from inputs
+  async function verifyBookingOTP() {
+    if (isVerifying) return;
+
+    const enteredOTP = otpDigits.map(input => input.value).join('');
+    if (enteredOTP.length < 6) return;
+
+    isVerifying = true;
+    btnVerifyOtp.innerHTML = `<i data-lucide="loader" class="animate-spin" style="width:16px;height:16px"></i> Verifying...`;
+    if (window.lucide) window.lucide.createIcons();
+
+    try {
+      const response = await fetch(API_BASE + '/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: pendingBooking.email, phone: pendingBooking.phone, otp: enteredOTP })
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        // Complete the Booking!
+        closeOtpModal();
+        await completeReservationBooking();
+      } else {
+        // Show error states
+        otpErrorMessage.textContent = data.message || "Incorrect verification code. Please try again.";
+        otpErrorMessage.style.display = 'block';
+        otpDigits.forEach(input => {
+          if (input) {
+            input.classList.add('error');
+            input.value = '';
+          }
+        });
+        if (otpDigits[0]) otpDigits[0].focus();
+      }
+    } catch (err) {
+      console.error("Verification failed:", err);
+      otpErrorMessage.textContent = "Server error. Please try again.";
+      otpErrorMessage.style.display = 'block';
+    } finally {
+      isVerifying = false;
+      btnVerifyOtp.innerHTML = `<i data-lucide="check"></i> Verify & Confirm Table`;
+      if (window.lucide) window.lucide.createIcons();
+    }
+  }
+
+  if (btnVerifyOtp) {
+    btnVerifyOtp.addEventListener('click', verifyBookingOTP);
+  }
+
+  // Actually submit the reservation database insertion & trigger WhatsApp redirect
+  async function completeReservationBooking() {
+    const { name, phone, email, date, time, guests, occasion, notes } = pendingBooking;
+    
+    // Trigger Visual Confetti
+    triggerHeartConfetti();
+
+    // Insert to Supabase DB if enabled
+    if (supabase) {
+      try {
+        const { error } = await supabase
+          .from('reservations')
+          .insert([{
+            name: name,
+            phone: phone,
+            email: email,
+            date: date,
+            time: time,
+            party_size: parseInt(guests, 10),
+            occasion_note: `${occasion}${notes ? ' - ' + notes : ''}`,
+            status: 'new',
+            phone_verified: true,
+            email_verified: true
+          }]);
+          
+        if (error) throw error;
+        console.log("Reservation successfully recorded in database with verified status!");
+      } catch (dbErr) {
+        console.error("Database reservation insert failed:", dbErr);
+      }
+    }
+
+    // Formulate WhatsApp message text
+    let whatsappPhone = "918950191495"; // Default fallback
+    let cafeName = "We Vibess Cafe";
+    if (cachedSettings) {
+      if (cachedSettings.whatsapp_number) {
+        whatsappPhone = cachedSettings.whatsapp_number.replace(/[^0-9]/g, '');
+      }
+      if (cachedSettings.logo_text) {
+        cafeName = cachedSettings.logo_text;
+      }
+    }
+    const messageText = `🌸 *Reservation Request — ${cafeName}* 🌸
+
+Hello ${cafeName}! 💖 I would like to request a table booking:
+
+👤 *Name:* ${name}
+📞 *Contact:* ${phone} (Verified)
+📅 *Date:* ${date}
+⏰ *Time:* ${time}
+👥 *Guests:* ${guests} people
+🎉 *Occasion:* ${occasion || 'None'}
+📝 *Special Notes:* ${notes || 'None'}
+
+Please confirm my table reservation! Thank you! ✨`;
+
+    const encodedText = encodeURIComponent(messageText);
+    const whatsappURL = `https://wa.me/${whatsappPhone}?text=${encodedText}`;
+
+    // Update link and text in confirmation popup
+    if (whatsappConfirmLink) whatsappConfirmLink.setAttribute('href', whatsappURL);
+    if (confirmDetailsText) {
+      confirmDetailsText.innerHTML = `Thank you <strong>${name}</strong>! We've verified your phone number and prepared booking details for <strong>${guests} guests</strong> on <strong>${date}</strong> at <strong>${time}</strong>. Click below to instantly send this request via WhatsApp.`;
+    }
+
+    // Display Modal
+    if (confirmModal) confirmModal.classList.add('active');
+  }
+
+  // Booking Form Submission Handler
   if (bookingForm) {
     bookingForm.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -878,61 +1298,41 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       
+      const submitBtn = bookingForm.querySelector('button[type="submit"]');
+      const originalText = submitBtn.innerHTML;
+
       const name = document.getElementById('booking-name').value.trim();
       const phone = document.getElementById('booking-phone').value.trim();
+      if (phone.length !== 10 || !/^\d{10}$/.test(phone)) {
+        alert("Please enter a valid 10-digit phone number.");
+        return;
+      }
+      const emailEl = document.getElementById('booking-email');
+      const email = emailEl ? emailEl.value.trim() : '';
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        alert("Please enter a valid email address.");
+        return;
+      }
       const date = document.getElementById('booking-date').value;
+      const todayStr = new Date().toLocaleDateString('en-CA');
+      if (date < todayStr) {
+        alert("Please select today's date or a future date.");
+        return;
+      }
       const time = document.getElementById('booking-time').value;
       const guests = document.getElementById('booking-guests').value;
       const occasion = document.getElementById('booking-occasion').value;
       const notes = document.getElementById('booking-notes').value.trim();
 
-      // Trigger Visual Confetti
-      triggerHeartConfetti();
+      pendingBooking = { name, phone, email, date, time, guests, occasion, notes };
 
-      // Insert to Supabase DB if enabled
-      if (supabase) {
-        try {
-          const { error } = await supabase
-            .from('reservations')
-            .insert([{
-              name: name,
-              phone: phone,
-              date: date,
-              time: time,
-              party_size: parseInt(guests, 10),
-              occasion_note: `${occasion}${notes ? ' - ' + notes : ''}`,
-              status: 'new'
-            }]);
-            
-          if (error) throw error;
-          console.log("Reservation successfully recorded in database!");
-        } catch (dbErr) {
-          console.error("Database reservation insert failed:", dbErr);
-        }
-      }
+      submitBtn.innerHTML = `<i data-lucide="loader" class="animate-spin" style="width:16px;height:16px"></i> Sending Verification Email...`;
+      if (window.lucide) window.lucide.createIcons();
 
-      // Formulate WhatsApp message text
-      const messageText = `Hi Pink & Blue Cafe! 💖 I'd like to request a table reservation:
-      
-✨ Name: ${name}
-📞 Phone: ${phone}
-📅 Date: ${date}
-⏰ Time: ${time}
-👥 Guests: ${guests}
-🎉 Occasion: ${occasion}
-📝 Notes: ${notes || 'None'}`;
+      await sendReservationOTP(email, phone);
 
-      const encodedText = encodeURIComponent(messageText);
-      const whatsappURL = `https://wa.me/919991110124?text=${encodedText}`;
-
-      // Update link and text in confirmation popup
-      if (whatsappConfirmLink) whatsappConfirmLink.setAttribute('href', whatsappURL);
-      if (confirmDetailsText) {
-        confirmDetailsText.innerHTML = `Thank you <strong>${name}</strong>! We've prepared booking details for <strong>${guests} guests</strong> on <strong>${date}</strong> at <strong>${time}</strong>. Click below to instantly send this request via WhatsApp.`;
-      }
-
-      // Display Modal
-      if (confirmModal) confirmModal.classList.add('active');
+      submitBtn.innerHTML = originalText;
+      if (window.lucide) window.lucide.createIcons();
     });
   }
 
@@ -1381,6 +1781,186 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     modal.addEventListener('click', (e) => {
       if (e.target === modal) modal.classList.remove('active');
+    });
+  }
+
+  /* ==========================================================================
+     13. GUEST REVIEWS SYSTEM
+     ========================================================================== */
+  async function loadGuestReviews() {
+    if (!supabase) return;
+    try {
+      const { data, error } = await supabase
+        .from('guest_reviews')
+        .select('*');
+        
+      if (error) throw error;
+      if (!data) return;
+
+      // Sort by created_at (descending)
+      const sortedReviews = data.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+      renderReviewsMarquee(sortedReviews);
+    } catch (err) {
+      console.error("Error loading guest reviews:", err);
+    }
+  }
+
+  function renderReviewsMarquee(reviews) {
+    const container = document.querySelector('.reviews-marquee-container');
+    if (!container) return;
+
+    const row1Reviews = [...reviews];
+    const row2Reviews = [...reviews].reverse();
+
+    while (row1Reviews.length < 8) {
+      row1Reviews.push(...reviews);
+    }
+    while (row2Reviews.length < 8) {
+      row2Reviews.push(...[...reviews].reverse());
+    }
+
+    const buildRowHTML = (items) => {
+      return items.map(item => {
+        const hearts = '💖'.repeat(item.rating || 5);
+        return `
+          <div class="review-card">
+            <div class="review-header">
+              <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=80&h=80&q=80" alt="${item.name}" class="reviewer-avatar">
+              <div class="reviewer-info">
+                <h4>${item.name}</h4>
+                <div class="rating-hearts">${hearts}</div>
+              </div>
+            </div>
+            <p class="review-text">"${item.review_text}"</p>
+            ${item.image_url ? `
+              <div class="review-photo-wrapper">
+                <img src="${item.image_url}" alt="${item.name}'s review photo" class="review-photo">
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+    };
+
+    container.innerHTML = `
+      <!-- Marquee Row 1 (Auto-scrolls left) -->
+      <div class="reviews-marquee-row">
+        ${buildRowHTML(row1Reviews)}
+      </div>
+      <!-- Marquee Row 2 (Auto-scrolls right) -->
+      <div class="reviews-marquee-row reverse">
+        ${buildRowHTML(row2Reviews)}
+      </div>
+    `;
+
+    // Re-trigger scroll reveal since we just modified innerHTML
+    const revealObserver = window.revealObserver;
+    if (revealObserver) {
+      container.querySelectorAll('.review-card').forEach(el => {
+        revealObserver.observe(el);
+      });
+    }
+  }
+
+  // Bind Review Modal Events
+  const openReviewModalBtn = document.getElementById('btn-open-review-modal');
+  const reviewModal = document.getElementById('review-modal');
+  const closeReviewModalBtn = document.getElementById('review-modal-close');
+  const photoSelect = document.getElementById('review-photo-select');
+  const customUrlInput = document.getElementById('review-custom-url');
+  
+  if (openReviewModalBtn && reviewModal) {
+    openReviewModalBtn.addEventListener('click', () => {
+      reviewModal.classList.add('active');
+    });
+  }
+  
+  const cancelReviewBtn = document.getElementById('btn-cancel-review');
+  
+  if (reviewModal) {
+    if (closeReviewModalBtn) {
+      closeReviewModalBtn.addEventListener('click', () => {
+        reviewModal.classList.remove('active');
+      });
+    }
+    if (cancelReviewBtn) {
+      cancelReviewBtn.addEventListener('click', () => {
+        reviewModal.classList.remove('active');
+      });
+    }
+    reviewModal.addEventListener('click', (e) => {
+      if (e.target === reviewModal) reviewModal.classList.remove('active');
+    });
+  }
+
+  if (photoSelect && customUrlInput) {
+    photoSelect.addEventListener('change', () => {
+      if (photoSelect.value === 'custom') {
+        customUrlInput.style.display = 'block';
+        customUrlInput.required = true;
+      } else {
+        customUrlInput.style.display = 'none';
+        customUrlInput.required = false;
+      }
+    });
+  }
+
+  const submitReviewForm = document.getElementById('submit-review-form');
+  if (submitReviewForm) {
+    submitReviewForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const name = document.getElementById('review-name').value.trim();
+      const rating = parseInt(document.getElementById('review-rating').value, 10);
+      const text = document.getElementById('review-text-input').value.trim();
+      const photoSelectVal = photoSelect.value;
+      const imageUrl = photoSelectVal === 'custom' ? customUrlInput.value.trim() : photoSelectVal;
+      
+      if (!name || !text) return;
+      
+      const submitBtn = submitReviewForm.querySelector('button[type="submit"]');
+      const originalText = submitBtn.innerHTML;
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span class="spinning-petal" style="width:14px;height:14px;border-width:2px;margin:0;"></span> Submitting...';
+      
+      try {
+        const newReview = {
+          name: name,
+          rating: rating,
+          review_text: text,
+          image_url: imageUrl || null,
+          created_at: new Date().toISOString()
+        };
+        
+        if (supabase) {
+          const { error } = await supabase
+            .from('guest_reviews')
+            .insert([newReview]);
+            
+          if (error) throw error;
+        }
+        
+        // Trigger confetti burst
+        triggerHeartConfetti();
+        
+        // Clear inputs
+        submitReviewForm.reset();
+        if (customUrlInput) customUrlInput.style.display = 'none';
+        
+        // Hide modal
+        if (reviewModal) reviewModal.classList.remove('active');
+        
+        alert("Thank you for sharing your review! 💖 It is now visible on our Guest Moments wall.");
+        
+        // Reload reviews marquee
+        await loadGuestReviews();
+        
+      } catch (err) {
+        alert(`Submission failed: ${err.message}`);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+      }
     });
   }
 

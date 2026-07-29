@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Dashboard | Pink & Blue Cafe Control Panel</title>
+  <title>Admin Dashboard | We Vibes Cafe Control Panel</title>
   
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -393,17 +393,17 @@
           </svg>
         </div>
         <div class="logo-text">
-          <span class="brand-title">Pink & Blue</span>
+          <span class="brand-title">We Vibes</span>
           <span class="brand-subtitle">CAFE</span>
         </div>
       </div>
       <h2>Admin Control Panel</h2>
-      <p>Secure login for Pink & Blue Cafe administrators.</p>
+      <p>Secure login for We Vibes Cafe administrators.</p>
       
       <form id="admin-login-form" class="booking-form" style="text-align: left;">
         <div class="form-group">
           <label for="login-email">Email Address</label>
-          <input type="email" id="login-email" required placeholder="name@pinkandblue.com" autocomplete="username">
+          <input type="email" id="login-email" required placeholder="name@wevibes.com" autocomplete="username">
         </div>
         <div class="form-group">
           <label for="login-password">Password</label>
@@ -433,7 +433,7 @@
             </svg>
           </div>
           <div class="logo-text text-white">
-            <span class="brand-title">Pink & Blue</span>
+            <span class="brand-title">We Vibes</span>
             <span class="brand-subtitle">CAFE</span>
           </div>
         </div>
@@ -696,24 +696,122 @@
           <div class="admin-card">
             <h2><i data-lucide="sliders"></i> Global Cafe Configurations</h2>
             <form id="cafe-settings-form" class="admin-form">
+              
+              <h3 style="font-family: var(--font-title); font-size: 1.15rem; font-weight: 700; margin-bottom: 15px; border-bottom: 2px dashed rgba(27, 42, 74, 0.06); padding-bottom: 8px;">🎨 Brand & Theme Settings</h3>
+              
+              <div class="form-row-grid">
+                <div class="form-group">
+                  <label for="settings-theme-name">Theme Presets</label>
+                  <select id="settings-theme-name" required>
+                    <option value="pink_paradise">Pink Paradise (Default)</option>
+                    <option value="blue_ocean">Blue Ocean Elegance</option>
+                    <option value="lavender_dream">Lavender Dream</option>
+                    <option value="emerald_luxury">Emerald Luxury</option>
+                    <option value="sunset_warmth">Sunset Warmth</option>
+                    <option value="dark_crimson">Dark Crimson Rose</option>
+                    <option value="custom">Custom Color Palette</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="settings-logo-text">Custom Logo / Brand Text</label>
+                  <input type="text" id="settings-logo-text" required placeholder="e.g. We Vibes">
+                </div>
+              </div>
+
+              <!-- Collapsible Custom Color Palette -->
+              <div id="custom-color-palette-container" style="display: none; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: var(--radius-sm); padding: 20px; margin-bottom: 15px;">
+                <h4 style="font-family: var(--font-title); font-size: 0.95rem; font-weight: 700; margin-bottom: 12px; color: var(--navy-dark);">Custom Theme Palette Colors</h4>
+                <div class="form-row-grid" style="grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px;">
+                  <div class="form-group" style="align-items: center; text-align: center;">
+                    <label for="settings-primary-pink" style="font-size: 0.75rem;">Primary Theme</label>
+                    <input type="color" id="settings-primary-pink" style="width: 50px; height: 50px; border-radius: 50%; border: 1.5px solid #cbd5e1; cursor: pointer; padding: 0;">
+                  </div>
+                  <div class="form-group" style="align-items: center; text-align: center;">
+                    <label for="settings-accent-magenta" style="font-size: 0.75rem;">Accent / Action</label>
+                    <input type="color" id="settings-accent-magenta" style="width: 50px; height: 50px; border-radius: 50%; border: 1.5px solid #cbd5e1; cursor: pointer; padding: 0;">
+                  </div>
+                  <div class="form-group" style="align-items: center; text-align: center;">
+                    <label for="settings-bg-blush" style="font-size: 0.75rem;">BG Medium</label>
+                    <input type="color" id="settings-bg-blush" style="width: 50px; height: 50px; border-radius: 50%; border: 1.5px solid #cbd5e1; cursor: pointer; padding: 0;">
+                  </div>
+                  <div class="form-group" style="align-items: center; text-align: center;">
+                    <label for="settings-bg-blush-light" style="font-size: 0.75rem;">BG Light</label>
+                    <input type="color" id="settings-bg-blush-light" style="width: 50px; height: 50px; border-radius: 50%; border: 1.5px solid #cbd5e1; cursor: pointer; padding: 0;">
+                  </div>
+                  <div class="form-group" style="align-items: center; text-align: center;">
+                    <label for="settings-navy-dark" style="font-size: 0.75rem;">Navy Dark Text</label>
+                    <input type="color" id="settings-navy-dark" style="width: 50px; height: 50px; border-radius: 50%; border: 1.5px solid #cbd5e1; cursor: pointer; padding: 0;">
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-row-grid">
+                <div class="form-group">
+                  <label for="settings-font-heading">Heading Font Family</label>
+                  <select id="settings-font-heading">
+                    <option value="Outfit">Outfit (Default)</option>
+                    <option value="Playfair Display">Playfair Display (Serif)</option>
+                    <option value="Inter">Inter (Sans-serif)</option>
+                    <option value="Roboto">Roboto (Grotesque)</option>
+                    <option value="Poppins">Poppins (Geometric)</option>
+                    <option value="Montserrat">Montserrat (Classic)</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="settings-font-body">Body Font Family</label>
+                  <select id="settings-font-body">
+                    <option value="Inter">Inter (Default)</option>
+                    <option value="Outfit">Outfit (Round)</option>
+                    <option value="Roboto">Roboto (Clean)</option>
+                    <option value="Open Sans">Open Sans (Friendly)</option>
+                    <option value="Lato">Lato (Warm)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style="margin: 10px 0;">
+                <label style="display:inline-flex; align-items:center; gap: 8px; font-size: 0.9rem; font-weight:600; cursor:pointer;">
+                  <input type="checkbox" id="settings-enable-blossom" checked> Enable Floating Cherry Blossom Petals
+                </label>
+              </div>
+
+              <h3 style="font-family: var(--font-title); font-size: 1.15rem; font-weight: 700; margin-top: 25px; margin-bottom: 15px; border-bottom: 2px dashed rgba(27, 42, 74, 0.06); padding-bottom: 8px;">✨ Homepage Banner Settings</h3>
+
+              <div class="form-row-grid">
+                <div class="form-group">
+                  <label for="settings-hero-title-line1">Hero Title (Line 1)</label>
+                  <input type="text" id="settings-hero-title-line1" required placeholder="e.g. Italian Cuisine">
+                </div>
+                <div class="form-group">
+                  <label for="settings-hero-title-line2">Hero Title (Line 2 / Twist)</label>
+                  <input type="text" id="settings-hero-title-line2" required placeholder="e.g. With a Twist">
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="settings-hero-description">Hero Banner Description</label>
+                <textarea id="settings-hero-description" rows="3" required placeholder="Romantic banner bio..."></textarea>
+              </div>
+
+              <h3 style="font-family: var(--font-title); font-size: 1.15rem; font-weight: 700; margin-top: 25px; margin-bottom: 15px; border-bottom: 2px dashed rgba(27, 42, 74, 0.06); padding-bottom: 8px;">📞 Contact Info & Socials</h3>
+
               <div class="form-row-grid">
                 <div class="form-group">
                   <label for="settings-phone">Phone Number (Direct Calls)</label>
-                  <input type="text" id="settings-phone" required placeholder="e.g. +91-9991110124">
+                  <input type="text" id="settings-phone" required placeholder="e.g. +91-8950191495">
                 </div>
                 <div class="form-group">
                   <label for="settings-whatsapp">WhatsApp Contact Number</label>
-                  <input type="text" id="settings-whatsapp" required placeholder="e.g. +91-9991110124">
+                  <input type="text" id="settings-whatsapp" required placeholder="e.g. +91-8950191495">
                 </div>
               </div>
               <div class="form-row-grid">
                 <div class="form-group">
                   <label for="settings-email">Email Address</label>
-                  <input type="email" id="settings-email" required placeholder="info@pinkandbluecafe.com">
+                  <input type="email" id="settings-email" required placeholder="zato08100@gmail.com">
                 </div>
                 <div class="form-group">
-                  <label for="settings-address">Street Address (Karnal)</label>
-                  <input type="text" id="settings-address" required placeholder="e.g. 220-B, Satiya Wala Mandir Road...">
+                  <label for="settings-address">Street Address (Leave empty to hide)</label>
+                  <input type="text" id="settings-address" placeholder="e.g. 220-B, Satiya Wala Mandir Road...">
                 </div>
               </div>
               <div class="form-group">
@@ -731,15 +829,13 @@
                 </div>
               </div>
               
-              <hr style="border: 0; border-top: 1px solid #cbd5e1; margin: 10px 0;">
-              
-              <h3 style="font-family: var(--font-title); font-size: 1.15rem; font-weight: 700; margin-bottom: 10px;">🕒 Operational Hours (Daily)</h3>
+              <h3 style="font-family: var(--font-title); font-size: 1.15rem; font-weight: 700; margin-top: 25px; margin-bottom: 10px;">🕒 Operational Hours (Daily)</h3>
               <div class="form-row-grid" id="hours-config-fields">
                 <!-- Javascript builds days forms -->
               </div>
               
               <div class="btn-row">
-                <button type="submit" class="btn btn-primary btn-bounce"><i data-lucide="save"></i> Save Global Configurations</button>
+                <button type="submit" class="btn btn-primary btn-bounce"><i data-lucide="save"></i> Save Configurations</button>
               </div>
             </form>
           </div>

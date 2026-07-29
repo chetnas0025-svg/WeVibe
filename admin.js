@@ -1813,6 +1813,95 @@ document.addEventListener('DOMContentLoaded', () => {
   /* ==========================================================================
      8. CAFE SETTINGS PAGE
      ========================================================================== */
+  // Theme presets definitions
+  const themePresets = {
+    pink_paradise: { primary: '#F2A6C4', accent: '#E6007E', bg: '#FADDE8', bgLight: '#FEF6F9', navy: '#1B2A4A' },
+    blue_ocean: { primary: '#A6C8F2', accent: '#005BE6', bg: '#DDE8FA', bgLight: '#F6F9FE', navy: '#1B2740' },
+    lavender_dream: { primary: '#C4A6F2', accent: '#7E00E6', bg: '#E8DDFA', bgLight: '#F9F6FE', navy: '#271B40' },
+    emerald_luxury: { primary: '#A6F2D5', accent: '#00A381', bg: '#DDFADE', bgLight: '#F6FEFA', navy: '#112F24' },
+    sunset_warmth: { primary: '#F2B6A6', accent: '#E64A00', bg: '#FADED7', bgLight: '#FEFAF6', navy: '#33160C' },
+    dark_crimson: { primary: '#E5A9A9', accent: '#9E1A1A', bg: '#FFE3E3', bgLight: '#FFF5F5', navy: '#2D0F0F' }
+  };
+
+  function updateThemeInputsVisibility() {
+    const themeSelect = document.getElementById('settings-theme-name');
+    const customContainer = document.getElementById('custom-color-palette-container');
+    if (!themeSelect) return;
+    
+    const selected = themeSelect.value;
+    if (selected === 'custom') {
+      customContainer.style.display = 'block';
+    } else {
+      customContainer.style.display = 'none';
+      const colors = themePresets[selected];
+      if (colors) {
+        document.getElementById('settings-primary-pink').value = colors.primary;
+        document.getElementById('settings-accent-magenta').value = colors.accent;
+        document.getElementById('settings-bg-blush').value = colors.bg;
+        document.getElementById('settings-bg-blush-light').value = colors.bgLight;
+        document.getElementById('settings-navy-dark').value = colors.navy;
+      }
+    }
+    applyThemePreview();
+  }
+
+  function applyThemePreview() {
+    const primary = document.getElementById('settings-primary-pink').value;
+    const accent = document.getElementById('settings-accent-magenta').value;
+    const bg = document.getElementById('settings-bg-blush').value;
+    const bgLight = document.getElementById('settings-bg-blush-light').value;
+    const navy = document.getElementById('settings-navy-dark').value;
+    const fontHeading = document.getElementById('settings-font-heading').value;
+    const fontBody = document.getElementById('settings-font-body').value;
+
+    let styleEl = document.getElementById('admin-theme-preview-styles');
+    if (!styleEl) {
+      styleEl = document.createElement('style');
+      styleEl.id = 'admin-theme-preview-styles';
+      document.head.appendChild(styleEl);
+    }
+    styleEl.innerHTML = `
+      :root {
+        --primary-pink: ${primary} !important;
+        --accent-magenta: ${accent} !important;
+        --bg-blush: ${bg} !important;
+        --bg-blush-light: ${bgLight} !important;
+        --navy-dark: ${navy} !important;
+        --font-title: '${fontHeading}', sans-serif !important;
+        --font-body: '${fontBody}', sans-serif !important;
+      }
+    `;
+    
+    if (fontHeading || fontBody) {
+      const fonts = [];
+      if (fontHeading) fonts.push(fontHeading);
+      if (fontBody) fonts.push(fontBody);
+      let fontLink = document.getElementById('admin-preview-font-link');
+      if (!fontLink) {
+        fontLink = document.createElement('link');
+        fontLink.id = 'admin-preview-font-link';
+        fontLink.rel = 'stylesheet';
+        document.head.appendChild(fontLink);
+      }
+      fontLink.href = `https://fonts.googleapis.com/css2?family=${fonts.map(f => f.replace(' ', '+')).join('&family=')}:wght@300;400;500;600;700;800&display=swap`;
+    }
+  }
+
+  // Bind change/input listeners for theme options
+  setTimeout(() => {
+    const themeSelect = document.getElementById('settings-theme-name');
+    if (themeSelect) {
+      themeSelect.addEventListener('change', updateThemeInputsVisibility);
+    }
+    ['settings-primary-pink', 'settings-accent-magenta', 'settings-bg-blush', 'settings-bg-blush-light', 'settings-navy-dark', 'settings-font-heading', 'settings-font-body'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('input', applyThemePreview);
+        el.addEventListener('change', applyThemePreview);
+      }
+    });
+  }, 500);
+
   async function loadSettingsData() {
     try {
       const { data, error } = await supabase
@@ -1831,7 +1920,23 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('settings-map-url').value = data.map_embed_url || '';
       document.getElementById('settings-instagram').value = data.instagram_url || '';
       document.getElementById('settings-facebook').value = data.facebook_url || '';
-      
+
+      // Set Visual Settings Inputs
+      document.getElementById('settings-theme-name').value = data.theme_name || 'pink_paradise';
+      document.getElementById('settings-logo-text').value = data.logo_text || 'We Vibes';
+      document.getElementById('settings-enable-blossom').checked = data.enable_blossom !== false;
+      document.getElementById('settings-primary-pink').value = data.custom_primary_pink || '#F2A6C4';
+      document.getElementById('settings-accent-magenta').value = data.custom_accent_magenta || '#E6007E';
+      document.getElementById('settings-bg-blush').value = data.custom_bg_blush || '#FADDE8';
+      document.getElementById('settings-bg-blush-light').value = data.custom_bg_blush_light || '#FEF6F9';
+      document.getElementById('settings-navy-dark').value = data.custom_navy_dark || '#1B2A4A';
+      document.getElementById('settings-font-heading').value = data.font_heading || 'Outfit';
+      document.getElementById('settings-font-body').value = data.font_body || 'Inter';
+      document.getElementById('settings-hero-title-line1').value = data.hero_title_line1 || 'Italian Cuisine';
+      document.getElementById('settings-hero-title-line2').value = data.hero_title_line2 || 'With a Twist';
+      document.getElementById('settings-hero-description').value = data.hero_description || '';
+
+      updateThemeInputsVisibility();
 
       const hoursFieldsContainer = document.getElementById('hours-config-fields');
       hoursFieldsContainer.innerHTML = '';
@@ -1876,6 +1981,21 @@ document.addEventListener('DOMContentLoaded', () => {
       const insta = document.getElementById('settings-instagram').value.trim();
       const fb = document.getElementById('settings-facebook').value.trim();
 
+      // Read visual variables
+      const themeName = document.getElementById('settings-theme-name').value;
+      const logoText = document.getElementById('settings-logo-text').value.trim();
+      const enableBlossom = document.getElementById('settings-enable-blossom').checked;
+      const primaryPink = document.getElementById('settings-primary-pink').value;
+      const accentMagenta = document.getElementById('settings-accent-magenta').value;
+      const bgBlush = document.getElementById('settings-bg-blush').value;
+      const bgBlushLight = document.getElementById('settings-bg-blush-light').value;
+      const navyDark = document.getElementById('settings-navy-dark').value;
+      const fontHeading = document.getElementById('settings-font-heading').value;
+      const fontBody = document.getElementById('settings-font-body').value;
+      const heroTitleLine1 = document.getElementById('settings-hero-title-line1').value.trim();
+      const heroTitleLine2 = document.getElementById('settings-hero-title-line2').value.trim();
+      const heroDescription = document.getElementById('settings-hero-description').value.trim();
+
       const hoursJson = {
         mon: document.getElementById('hours-mon').value.trim(),
         tue: document.getElementById('hours-tue').value.trim(),
@@ -1897,7 +2017,20 @@ document.addEventListener('DOMContentLoaded', () => {
             map_embed_url: mapUrl || null,
             instagram_url: insta || null,
             facebook_url: fb || null,
-            hours_json: hoursJson
+            hours_json: hoursJson,
+            theme_name: themeName,
+            logo_text: logoText,
+            enable_blossom: enableBlossom,
+            custom_primary_pink: primaryPink,
+            custom_accent_magenta: accentMagenta,
+            custom_bg_blush: bgBlush,
+            custom_bg_blush_light: bgBlushLight,
+            custom_navy_dark: navyDark,
+            font_heading: fontHeading,
+            font_body: fontBody,
+            hero_title_line1: heroTitleLine1,
+            hero_title_line2: heroTitleLine2,
+            hero_description: heroDescription
           })
           .eq('id', '00000000-0000-0000-0000-000000000000'); 
 

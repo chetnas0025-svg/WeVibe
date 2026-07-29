@@ -1766,11 +1766,11 @@
   "cafe_settings": [
     {
       "id": "00000000-0000-0000-0000-000000000000",
-      "address": "220-B, Satiya Wala Mandir Road, Model Town, Karnal, Haryana 132001",
-      "map_embed_url": "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3464.7107770857317!2d76.97495097629555!3d29.699144475101672!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x390e7195dfb8243b%3A0xe9f7bf9c855a0b73!2sSatiya%20Wala%20Mandir%20Road%2C%20Model%20Town%2C%20Karnal%2C%20Haryana%20132001!5e0!3m2!1sen!2sin!4v1711200000000!5m2!1sen!2sin",
-      "phone": "+91-9991110124-MOCK",
-      "whatsapp_number": "+91-9991110124",
-      "email": "info@pinkandbluecafe.com",
+      "address": "",
+      "map_embed_url": "",
+      "phone": "8950191495",
+      "whatsapp_number": "8950191495",
+      "email": "zato08100@gmail.com",
       "instagram_url": "https://instagram.com",
       "facebook_url": "https://facebook.com",
       "hours_json": {
@@ -1783,8 +1783,21 @@
         "sun": "11:00 AM to 10:15 PM"
       },
       "gemini_api_key": null,
+      "theme_name": "pink_paradise",
+      "custom_primary_pink": "#F2A6C4",
+      "custom_accent_magenta": "#E6007E",
+      "custom_bg_blush": "#FADDE8",
+      "custom_bg_blush_light": "#FEF6F9",
+      "custom_navy_dark": "#1B2A4A",
+      "font_heading": "Outfit",
+      "font_body": "Inter",
+      "logo_text": "We Vibes",
+      "enable_blossom": true,
+      "hero_title_line1": "Italian Cuisine",
+      "hero_title_line2": "With a Twist",
+      "hero_description": "Karnal's most romantic date-night destination. Enter a dreamy pastel paradise under glowing lanterns and cherry-blossoms, where plates look like art and food tastes like magic.",
       "created_at": "2026-07-08T06:14:35.429Z",
-      "updated_at": "2026-07-10T04:14:46.201Z"
+      "updated_at": "2026-07-24T04:35:40.664Z"
     }
   ],
   "offers": [
@@ -1817,5 +1830,39 @@
   ],
   "reservations": [],
   "contact_submissions": [],
-  "newsletter_signups": []
+  "newsletter_signups": [],
+  "guest_reviews": [
+    {
+      "id": "c1a01c34-eb1b-4f90-8cb5-14f7d1421001",
+      "name": "Chetna",
+      "rating": 5,
+      "review_text": "Step into a fairy tale! The signature pink burgers are delicious and the cherry-blossom swings are dream-like.",
+      "image_url": "assets/pink-burger.png",
+      "created_at": "2026-07-24T05:17:53.828Z"
+    },
+    {
+      "id": "c1a01c34-eb1b-4f90-8cb5-14f7d1421002",
+      "name": "Rajesh Kumar",
+      "rating": 5,
+      "review_text": "A magical date destination. Spotting the glowing pink hearts was wonderful. Highly recommended!",
+      "image_url": "assets/hero-bg.png",
+      "created_at": "2026-07-24T05:17:53.828Z"
+    },
+    {
+      "id": "c1a01c34-eb1b-4f90-8cb5-14f7d1421003",
+      "name": "Aditi Sen",
+      "rating": 5,
+      "review_text": "Absolutely loved the Blue Curacao Mocktail! Perfectly refreshing and photogenic. Best place in Karnal.",
+      "image_url": "assets/blue-curacao.png",
+      "created_at": "2026-07-24T05:17:53.828Z"
+    },
+    {
+      "id": "c1a01c34-eb1b-4f90-8cb5-14f7d1421004",
+      "name": "Priyanjali",
+      "rating": 5,
+      "review_text": "The Kitty Waffle was almost too cute to eat! Sweet berry cream is amazing. We'll be back for sure!",
+      "image_url": "assets/kitty-waffle.png",
+      "created_at": "2026-07-24T05:17:53.828Z"
+    }
+  ]
 }
