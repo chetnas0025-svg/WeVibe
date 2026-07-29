@@ -7,8 +7,6 @@ yarn-error.log*
 # Runtime data
 .tempmediaStorage/
 browser/
-*.png
-*.webp
 
 # Local env files
 .env
