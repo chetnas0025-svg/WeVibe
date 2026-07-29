@@ -321,20 +321,24 @@
       if (window.lucide) window.lucide.createIcons();
 
       try {
+        let authenticated = false;
         if (supabaseClient) {
-          // Live Supabase Authenticator
-          const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-          if (error) throw error;
-          
-          // Write token to server cookie for server-side validation
-          const session = data.session;
-          await fetch('/api/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token: session.access_token })
-          });
-        } else {
-          // Local Database Proxy Authenticator
+          try {
+            const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+            if (!error && data && data.session) {
+              await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: data.session.access_token })
+              });
+              authenticated = true;
+            }
+          } catch (spErr) {
+            console.log("Supabase Auth fallback to server login:", spErr.message);
+          }
+        }
+        
+        if (!authenticated) {
           const res = await fetch('/api/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -345,7 +349,6 @@
             throw new Error(await res.text());
           }
 
-          // Write session to localStorage for client-side Mock Database Client
           const localSession = { user: { email }, token: 'local-admin-mock-token' };
           localStorage.setItem('local_admin_session', JSON.stringify(localSession));
         }
