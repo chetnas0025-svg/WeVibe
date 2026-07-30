@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, Users, Phone, Mail, User, Heart, Sparkles, CheckCircle2, MessageSquare } from 'lucide-react';
-import OtpModal from '../components/OtpModal';
 
 export default function Reserve() {
   const [formData, setFormData] = useState({
@@ -15,9 +14,6 @@ export default function Reserve() {
   });
 
   const [minDate, setMinDate] = useState('');
-  const [isOtpOpen, setIsOtpOpen] = useState(false);
-  const [devOtp, setDevOtp] = useState('');
-  const [previewUrl, setPreviewUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [confirmedBooking, setConfirmedBooking] = useState(null);
 
@@ -48,60 +44,58 @@ export default function Reserve() {
     setLoading(true);
 
     try {
-      const res = await fetch('/api/auth/send-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: formData.email, phone: formData.phone })
-      });
+      const newBooking = {
+        id: 'WV-' + Math.floor(100000 + Math.random() * 900000),
+        ...formData,
+        created_at: new Date().toISOString()
+      };
 
-      const data = await res.json();
-      if (data.success) {
-        setDevOtp(data.otp);
-        setPreviewUrl(data.preview_url || '');
-        setIsOtpOpen(true);
-      } else {
-        alert(data.message || "Failed to send verification code. Please try again.");
+      // Save to localStorage for My Account view
+      const existingBookings = JSON.parse(localStorage.getItem('wevibes_user_bookings') || '[]');
+      existingBookings.unshift(newBooking);
+      localStorage.setItem('wevibes_user_bookings', JSON.stringify(existingBookings));
+
+      // Record to PostgreSQL database endpoint
+      try {
+        await fetch('/api/reservations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: formData.name,
+            phone: formData.phone,
+            email: formData.email,
+            date: formData.date,
+            time: formData.time,
+            party_size: parseInt(formData.guests, 10),
+            occasion_note: `${formData.occasion}${formData.notes ? ' - ' + formData.notes : ''}`,
+            status: 'confirmed'
+          })
+        });
+      } catch (dbErr) {
+        console.warn("Local DB sync notice:", dbErr.message);
       }
+
+      setConfirmedBooking(newBooking);
     } catch (err) {
-      console.error("OTP send failed:", err);
-      alert("Server connection issue. Please check your backend.");
+      console.error("Booking error:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleVerifyOtp = async (enteredOtp) => {
-    try {
-      const res = await fetch('/api/auth/verify-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: formData.email, phone: formData.phone, otp: enteredOtp })
-      });
-
-      const data = await res.json();
-      if (data.success) {
-        // Record in LocalStorage for My Account view
-        const existingBookings = JSON.parse(localStorage.getItem('wevibes_user_bookings') || '[]');
-        const newBooking = {
-          id: 'WV-' + Math.floor(100000 + Math.random() * 900000),
-          ...formData,
-          created_at: new Date().toISOString()
-        };
-        existingBookings.unshift(newBooking);
-        localStorage.setItem('wevibes_user_bookings', JSON.stringify(existingBookings));
-
-        setConfirmedBooking(newBooking);
-        setIsOtpOpen(false);
-        return { success: true };
-      } else {
-        return { success: false, message: data.message };
-      }
-    } catch (err) {
-      return { success: false, message: 'Server connection error.' };
-    }
-  };
-
   if (confirmedBooking) {
+    const waText = encodeURIComponent(
+      `Hello We Vibes Cafe! 🌸\nI would like to confirm my table reservation:\n\n` +
+      `• Booking ID: ${confirmedBooking.id}\n` +
+      `• Name: ${confirmedBooking.name}\n` +
+      `• Contact: ${confirmedBooking.phone}\n` +
+      `• Email: ${confirmedBooking.email}\n` +
+      `• Date: ${confirmedBooking.date}\n` +
+      `• Time: ${confirmedBooking.time}\n` +
+      `• Guests: ${confirmedBooking.guests} Person(s)\n` +
+      `• Occasion: ${confirmedBooking.occasion}`
+    );
+
     return (
       <div className="max-w-3xl mx-auto px-4 py-16 text-center space-y-8 animate-fadeIn">
         <div className="w-20 h-20 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-xl">
@@ -109,10 +103,10 @@ export default function Reserve() {
         </div>
 
         <div className="space-y-3">
-          <span className="text-xs uppercase tracking-widest text-gold-dark font-bold">Reservation Confirmed</span>
+          <span className="text-xs uppercase tracking-widest text-gold-dark font-bold">Reservation Reserved</span>
           <h1 className="font-serif text-4xl font-bold text-espresso-900">See You Soon at We Vibes!</h1>
           <p className="text-espresso-800/70 text-base max-w-md mx-auto">
-            Your table reservation has been verified and saved. A confirmation summary has been sent to your email.
+            Your table reservation has been saved! Click below to send your reservation directly to our WhatsApp.
           </p>
         </div>
 
@@ -143,16 +137,17 @@ export default function Reserve() {
 
         <div className="flex flex-col sm:flex-row justify-center gap-4 pt-4">
           <a
-            href={`https://wa.me/918950191495?text=Hello%20We%20Vibes%20Cafe,%20I%20have%20confirmed%20a%20reservation%20(ID:%20${confirmedBooking.id})%20for%20${confirmedBooking.name}%20on%20${confirmedBooking.date}%20at%20${confirmedBooking.time}.`}
+            href={`https://wa.me/918950191495?text=${waText}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-6 py-3 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm shadow-md flex items-center justify-center gap-2"
+            className="px-8 py-4 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-base shadow-xl flex items-center justify-center gap-2 transform hover:scale-105 transition-all"
           >
-            <MessageSquare className="w-4 h-4" /> Open WhatsApp Confirmation
+            <MessageSquare className="w-5 h-5" />
+            <span>Confirm Reservation via WhatsApp</span>
           </a>
           <button
             onClick={() => { setConfirmedBooking(null); setFormData(prev => ({ ...prev, name: '', notes: '' })); }}
-            className="px-6 py-3 rounded-full bg-espresso-800 hover:bg-espresso-900 text-gold-light font-semibold text-sm shadow-md"
+            className="px-6 py-4 rounded-full bg-espresso-800 hover:bg-espresso-900 text-gold-light font-semibold text-sm shadow-md"
           >
             Book Another Table
           </button>
@@ -169,7 +164,7 @@ export default function Reserve() {
         <span className="text-xs uppercase tracking-widest text-gold-dark font-bold">Priority Dining</span>
         <h1 className="font-serif text-4xl sm:text-5xl font-bold text-espresso-900">Reserve a Table</h1>
         <p className="max-w-xl mx-auto text-espresso-800/70 text-base">
-          Verify your booking instantly via 6-digit Email OTP. Operating hours: <strong>10:00 AM – 10:00 PM</strong>.
+          Direct table booking with instant WhatsApp confirmation. Hours: <strong>10:00 AM – 10:00 PM</strong>.
         </p>
         <div className="w-16 h-1 bg-gold rounded-full mx-auto" />
       </div>
@@ -191,7 +186,7 @@ export default function Reserve() {
                 value={formData.name}
                 onChange={handleChange}
                 placeholder="e.g. Rahul Sharma"
-                className="w-full px-4 py-3 rounded-xl bg-cream-50 border border-gold/30 text-espresso-900 placeholder-espresso-800/40 text-sm focus:outline-none focus:border-gold focus:bg-white transition-all"
+                className="w-full px-4 py-3 rounded-xl bg-cream-50 border border-gold/30 text-espresso-900 text-sm focus:outline-none focus:border-gold focus:bg-white transition-all"
               />
             </div>
 
@@ -208,7 +203,7 @@ export default function Reserve() {
                 value={formData.phone}
                 onChange={handleChange}
                 placeholder="e.g. 9876543210"
-                className="w-full px-4 py-3 rounded-xl bg-cream-50 border border-gold/30 text-espresso-900 placeholder-espresso-800/40 text-sm focus:outline-none focus:border-gold focus:bg-white transition-all"
+                className="w-full px-4 py-3 rounded-xl bg-cream-50 border border-gold/30 text-espresso-900 text-sm focus:outline-none focus:border-gold focus:bg-white transition-all"
               />
             </div>
           </div>
@@ -217,7 +212,7 @@ export default function Reserve() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <label className="text-sm font-semibold text-espresso-900 flex items-center gap-2">
-                <Mail className="w-4 h-4 text-gold-dark" /> Email Address (for OTP) *
+                <Mail className="w-4 h-4 text-gold-dark" /> Email Address *
               </label>
               <input
                 type="email"
@@ -226,7 +221,7 @@ export default function Reserve() {
                 value={formData.email}
                 onChange={handleChange}
                 placeholder="e.g. rahul@example.com"
-                className="w-full px-4 py-3 rounded-xl bg-cream-50 border border-gold/30 text-espresso-900 placeholder-espresso-800/40 text-sm focus:outline-none focus:border-gold focus:bg-white transition-all"
+                className="w-full px-4 py-3 rounded-xl bg-cream-50 border border-gold/30 text-espresso-900 text-sm focus:outline-none focus:border-gold focus:bg-white transition-all"
               />
             </div>
 
@@ -320,20 +315,10 @@ export default function Reserve() {
             className="w-full py-4 rounded-full bg-gradient-to-r from-gold via-gold-dark to-gold hover:from-gold-dark hover:to-gold text-white font-bold text-base shadow-xl hover:shadow-2xl transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
           >
             <Sparkles className="w-5 h-5" />
-            <span>{loading ? 'Sending Email OTP...' : 'Send OTP & Reserve Table'}</span>
+            <span>{loading ? 'Confirming Table...' : 'Confirm Table & Open WhatsApp'}</span>
           </button>
         </form>
       </div>
-
-      {/* Otp Verification Modal */}
-      <OtpModal
-        isOpen={isOtpOpen}
-        onClose={() => setIsOtpOpen(false)}
-        onVerify={handleVerifyOtp}
-        targetEmail={formData.email}
-        devOtp={devOtp}
-        previewUrl={previewUrl}
-      />
 
     </div>
   );

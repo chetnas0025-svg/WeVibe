@@ -1,8 +1,35 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Sparkles, Calendar, Utensils, Star, Coffee, ShieldCheck, Heart, ArrowRight } from 'lucide-react';
+import { Sparkles, Calendar, Utensils, Star, Coffee, ShieldCheck, Heart, ArrowRight, MessageSquarePlus } from 'lucide-react';
+import ReviewModal from '../components/ReviewModal';
 
 export default function Home() {
+  const [isReviewOpen, setIsReviewOpen] = useState(false);
+  const [testimonials, setTestimonials] = useState([
+    {
+      name: 'Ananya Sharma',
+      role: 'Food Critic & Blogger',
+      comment: 'The ambiance at We Vibes is pure magic! The signature pink burger and blue curacao mocktail are absolute showstoppers.',
+      rating: 5
+    },
+    {
+      name: 'Rohan Verma',
+      role: 'Regular Visitor',
+      comment: 'Flawless table reservation experience with direct WhatsApp confirmation. Great food quality and exceptionally warm hospitality.',
+      rating: 5
+    },
+    {
+      name: 'Priya Nair',
+      role: 'Event Host',
+      comment: 'Hosted my birthday celebration here. The aesthetic dessert plating and seating arrangement were top notch!',
+      rating: 5
+    }
+  ]);
+
+  const handleAddReview = (newReview) => {
+    setTestimonials(prev => [newReview, ...prev]);
+  };
+
   const signatureDishes = [
     {
       id: 1,
@@ -30,27 +57,6 @@ export default function Home() {
       image: '/assets/kitty-waffle.png',
       desc: 'Fluffy Belgian waffle topped with strawberry chocolate drizzle, whipped cream, sprinkles & organic berry gelato.',
       rating: 5.0
-    }
-  ];
-
-  const testimonials = [
-    {
-      name: 'Ananya Sharma',
-      role: 'Food Critic & Blogger',
-      comment: 'The ambiance at We Vibes is pure magic! The signature pink burger and blue curacao mocktail are absolute showstoppers.',
-      rating: 5
-    },
-    {
-      name: 'Rohan Verma',
-      role: 'Regular Visitor',
-      comment: 'Flawless table reservation experience via email OTP. Great food quality and exceptionally warm hospitality.',
-      rating: 5
-    },
-    {
-      name: 'Priya Nair',
-      role: 'Event Host',
-      comment: 'Hosted my birthday celebration here. The aesthetic dessert plating and seating arrangement were top notch!',
-      rating: 5
     }
   ];
 
@@ -129,9 +135,9 @@ export default function Home() {
             <div className="w-14 h-14 rounded-2xl bg-gold-light/20 text-gold-dark flex items-center justify-center group-hover:scale-110 transition-transform">
               <ShieldCheck className="w-7 h-7" />
             </div>
-            <h3 className="font-serif font-bold text-xl text-espresso-900">Instant Verification</h3>
+            <h3 className="font-serif font-bold text-xl text-espresso-900">Instant WhatsApp Confirmation</h3>
             <p className="text-espresso-800/70 text-sm leading-relaxed">
-              Seamless 6-digit Email OTP verification for instant, guaranteed table reservations with no waiting times.
+              Seamless table reservations with direct WhatsApp confirmation links for guaranteed priority seating.
             </p>
           </div>
         </div>
@@ -189,13 +195,23 @@ export default function Home() {
         </div>
       </section>
 
-      {/* TESTIMONIALS */}
+      {/* TESTIMONIALS WITH ADD REVIEW BUTTON */}
       <section className="bg-espresso-900 text-cream-50 py-20 relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12 relative z-10">
-          <div className="text-center space-y-3">
-            <span className="text-xs uppercase tracking-widest text-gold-light font-bold">Guest Experiences</span>
-            <h2 className="font-serif text-3xl sm:text-4xl font-bold text-cream-50">What Our Guests Say</h2>
-            <div className="w-16 h-1 bg-gold rounded-full mx-auto" />
+          
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-center sm:text-left space-y-2">
+              <span className="text-xs uppercase tracking-widest text-gold-light font-bold">Guest Experiences</span>
+              <h2 className="font-serif text-3xl sm:text-4xl font-bold text-cream-50">What Our Guests Say</h2>
+            </div>
+
+            <button
+              onClick={() => setIsReviewOpen(true)}
+              className="px-6 py-3 rounded-full bg-gradient-to-r from-gold to-gold-dark hover:from-gold-dark hover:to-gold text-white font-bold text-sm shadow-lg flex items-center gap-2 transform hover:scale-105 transition-all"
+            >
+              <MessageSquarePlus className="w-4 h-4" />
+              <span>Add Review</span>
+            </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -224,7 +240,7 @@ export default function Home() {
             Reserve Your Table at We Vibes Cafe
           </h2>
           <p className="max-w-xl mx-auto text-white/90 text-base sm:text-lg">
-            Enjoy instant email verification, priority window seating, and complimentary welcome mocktails.
+            Enjoy priority window seating and complimentary welcome mocktails.
           </p>
           <Link
             to="/reserve"
@@ -235,6 +251,13 @@ export default function Home() {
           </Link>
         </div>
       </section>
+
+      {/* Review Modal */}
+      <ReviewModal
+        isOpen={isReviewOpen}
+        onClose={() => setIsReviewOpen(false)}
+        onAddReview={handleAddReview}
+      />
 
     </div>
   );
