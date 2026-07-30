@@ -9,10 +9,12 @@ export default function Menu() {
 
   // Order modal state
   const [selectedItem, setSelectedItem] = useState(null);
+  const [orderType, setOrderType] = useState('table');
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
 
-  const handleOpenOrder = (item) => {
+  const handleOpenOrder = (item, type = 'table') => {
     setSelectedItem(item);
+    setOrderType(type);
     setIsOrderModalOpen(true);
   };
 
@@ -81,11 +83,11 @@ export default function Menu() {
       {/* Header Banner */}
       <div className="text-center space-y-3">
         <span className="text-xs uppercase tracking-widest text-gold-dark font-bold flex items-center justify-center gap-1">
-          <Sparkles className="w-4 h-4 text-gold" /> Artisanal Culinary Selection
+          <Sparkles className="w-4 h-4 text-gold animate-spin" /> Artisanal Culinary Selection
         </span>
         <h1 className="font-serif text-4xl sm:text-5xl font-bold text-espresso-900">Explore Our Full Menu</h1>
         <p className="max-w-xl mx-auto text-espresso-800/70 text-base">
-          Every single dish features 100% visible photos, instant Email OTP verification, and dining order options.
+          Click <strong>Order at Table</strong> or <strong>Home Delivery</strong> for instant, fast ordering!
         </p>
         <div className="w-16 h-1 bg-gold rounded-full mx-auto" />
       </div>
@@ -181,7 +183,7 @@ export default function Menu() {
                   )}
                 </div>
 
-                <span className="absolute top-3 right-3 px-3.5 py-1 rounded-full bg-white/90 backdrop-blur-md text-gold-dark font-bold text-sm shadow-md">
+                <span className="absolute top-3 right-3 px-3.5 py-1 rounded-full bg-white/90 backdrop-blur-md text-gold-dark font-bold text-sm shadow-md font-serif">
                   {item.price}
                 </span>
               </div>
@@ -203,18 +205,18 @@ export default function Menu() {
                   </p>
                 </div>
 
-                {/* Card Action Buttons: Order at Table & Home Delivery */}
+                {/* Fast Action Order Buttons */}
                 <div className="pt-3 border-t border-cream-200 flex flex-col sm:flex-row gap-2">
                   <button
-                    onClick={() => handleOpenOrder(item)}
-                    className="flex-1 py-2.5 px-3 rounded-xl bg-espresso-900 hover:bg-espresso-800 text-gold-light font-bold text-xs shadow transition-all flex items-center justify-center gap-1.5"
+                    onClick={() => handleOpenOrder(item, 'table')}
+                    className="flex-1 py-2.5 px-3 rounded-xl bg-espresso-900 hover:bg-espresso-800 text-gold-light font-bold text-xs shadow transition-all flex items-center justify-center gap-1.5 hover:scale-105"
                   >
                     <Utensils className="w-3.5 h-3.5 text-gold" />
                     <span>Order at Table</span>
                   </button>
                   <button
-                    onClick={() => handleOpenOrder(item)}
-                    className="flex-1 py-2.5 px-3 rounded-xl bg-gold/15 hover:bg-gold/25 text-espresso-900 border border-gold/40 font-bold text-xs transition-all flex items-center justify-center gap-1.5"
+                    onClick={() => handleOpenOrder(item, 'delivery')}
+                    className="flex-1 py-2.5 px-3 rounded-xl bg-gold/15 hover:bg-gold/25 text-espresso-900 border border-gold/40 font-bold text-xs transition-all flex items-center justify-center gap-1.5 hover:scale-105"
                   >
                     <Truck className="w-3.5 h-3.5 text-gold-dark" />
                     <span>Home Delivery</span>
@@ -231,6 +233,7 @@ export default function Menu() {
         isOpen={isOrderModalOpen}
         onClose={() => setIsOrderModalOpen(false)}
         item={selectedItem}
+        initialType={orderType}
       />
 
     </div>
