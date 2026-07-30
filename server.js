@@ -1151,12 +1151,17 @@ if (fs.existsSync(path.join(__dirname, 'dist'))) {
   });
 }
 
-// Start Express server
-app.listen(PORT, () => {
-  console.log(`===================================================`);
-  console.log(`WE VIBES CAFE local API & frontend server running`);
-  console.log(`URL: http://localhost:${PORT}`);
-  console.log(`Database File: ${DB_FILE}`);
-  console.log(`Uploads Directory: ${UPLOADS_DIR}`);
-  console.log(`===================================================`);
-});
+// Start Express server if run directly
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`===================================================`);
+    console.log(`WE VIBES CAFE local API & frontend server running`);
+    console.log(`URL: http://localhost:${PORT}`);
+    console.log(`Database File: ${DB_FILE}`);
+    console.log(`Uploads Directory: ${UPLOADS_DIR}`);
+    console.log(`===================================================`);
+  });
+}
+
+module.exports = app;
+
