@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Lock, Mail, Phone, LogIn, UserPlus, KeyRound, CheckCircle, ArrowRight } from 'lucide-react';
+import { User, Lock, Mail, Phone, LogIn, UserPlus, KeyRound, CheckCircle, ArrowRight, ShieldCheck, ExternalLink, Loader } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
@@ -19,15 +19,19 @@ export default function Login() {
   const [regPhone, setRegPhone] = useState('');
   const [regPassword, setRegPassword] = useState('');
 
-  // Forgot Password State
-  const [resetIdentifier, setResetIdentifier] = useState('');
+  // Forgot Password State (with Email OTP)
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotOtp, setForgotOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [resetStep, setResetStep] = useState(1); // 1: identify, 2: set new password, 3: success
+  const [forgotStep, setForgotStep] = useState(1); // 1: Email, 2: OTP, 3: New Password, 4: Success
+  const [devOtp, setDevOtp] = useState('');
+  const [previewUrl, setPreviewUrl] = useState('');
 
   const [error, setError] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
+  const [loading, setLoading] = useState(false);
 
+  // 1. Handle Login
   const handleLogin = (e) => {
     e.preventDefault();
     setError('');
@@ -39,14 +43,10 @@ export default function Login() {
     }
   };
 
+  // 2. Handle Register (First time email + password creation)
   const handleRegister = (e) => {
     e.preventDefault();
     setError('');
-
-    if (regPhone.length !== 10 || !/^\d{10}$/.test(regPhone)) {
-      setError("Please enter a valid 10-digit phone number.");
-      return;
-    }
 
     if (!regEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(regEmail)) {
       setError("Please enter a valid email address.");
@@ -59,10 +59,10 @@ export default function Login() {
     }
 
     const res = register({
-      name: regName || 'Valued Member',
-      username: regEmail.split('@')[0] || regPhone,
+      name: regName || regEmail.split('@')[0],
+      username: regEmail.split('@')[0],
       email: regEmail,
-      phone: regPhone,
+      phone: regPhone || '9876543210',
       password: regPassword,
       joinedDate: 'July 2026'
     });
@@ -74,16 +74,73 @@ export default function Login() {
     }
   };
 
-  const handleIdentifyAccount = (e) => {
+  // 3. Forgot Password - Step 1: Send Email OTP
+  const handleSendForgotOtp = async (e) => {
     e.preventDefault();
     setError('');
-    if (!resetIdentifier.trim()) {
-      setError("Please enter your registered email address or 10-digit phone number.");
+
+    if (!forgotEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(forgotEmail)) {
+      setError("Please enter a valid email address.");
       return;
     }
-    setResetStep(2);
+
+    setLoading(true);
+
+    try {
+      const res = await fetch('/api/auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: forgotEmail })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setDevOtp(data.otp);
+        setPreviewUrl(data.preview_url || '');
+        setForgotStep(2);
+      } else {
+        setError(data.message || "Failed to send verification code.");
+      }
+    } catch (err) {
+      setError("Server connection issue. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
+  // 4. Forgot Password - Step 2: Verify Email OTP
+  const handleVerifyForgotOtp = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    if (forgotOtp.length !== 6 || !/^\d{6}$/.test(forgotOtp)) {
+      setError("Please enter the 6-digit verification code sent to your email.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const res = await fetch('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: forgotEmail, otp: forgotOtp })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setForgotStep(3);
+      } else {
+        setError(data.message || "Incorrect verification code.");
+      }
+    } catch (err) {
+      setError("Server connection issue. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 5. Forgot Password - Step 3: Create New Password
   const handleSetNewPassword = (e) => {
     e.preventDefault();
     setError('');
@@ -98,10 +155,9 @@ export default function Login() {
       return;
     }
 
-    const res = resetPassword(resetIdentifier, newPassword);
+    const res = resetPassword(forgotEmail, newPassword);
     if (res.success) {
-      setResetStep(3);
-      setSuccessMsg("Password reset successfully! You can now sign in with your new password.");
+      setForgotStep(4);
     } else {
       setError(res.message);
     }
@@ -127,7 +183,7 @@ export default function Login() {
         {/* Navigation Tabs */}
         <div className="flex border-b border-cream-200">
           <button
-            onClick={() => { setActiveTab('login'); setError(''); setSuccessMsg(''); }}
+            onClick={() => { setActiveTab('login'); setError(''); }}
             className={`flex-1 py-3 font-bold text-xs sm:text-sm border-b-2 transition-colors ${
               activeTab === 'login'
                 ? 'border-gold-dark text-gold-dark'
@@ -137,7 +193,7 @@ export default function Login() {
             Sign In
           </button>
           <button
-            onClick={() => { setActiveTab('register'); setError(''); setSuccessMsg(''); }}
+            onClick={() => { setActiveTab('register'); setError(''); }}
             className={`flex-1 py-3 font-bold text-xs sm:text-sm border-b-2 transition-colors ${
               activeTab === 'register'
                 ? 'border-gold-dark text-gold-dark'
@@ -147,7 +203,7 @@ export default function Login() {
             Create Account
           </button>
           <button
-            onClick={() => { setActiveTab('forgot'); setError(''); setSuccessMsg(''); setResetStep(1); }}
+            onClick={() => { setActiveTab('forgot'); setError(''); setForgotStep(1); setForgotOtp(''); }}
             className={`flex-1 py-3 font-bold text-xs sm:text-sm border-b-2 transition-colors ${
               activeTab === 'forgot'
                 ? 'border-gold-dark text-gold-dark'
@@ -164,18 +220,12 @@ export default function Login() {
           </div>
         )}
 
-        {successMsg && (
-          <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold">
-            {successMsg}
-          </div>
-        )}
-
         {/* 1. SIGN IN FORM */}
         {activeTab === 'login' && (
           <form onSubmit={handleLogin} className="space-y-5">
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-espresso-900 uppercase tracking-wider">
-                Email Address or 10-Digit Phone Number
+                Email Address or 10-Digit Phone
               </label>
               <div className="relative">
                 <input
@@ -217,21 +267,20 @@ export default function Login() {
           </form>
         )}
 
-        {/* 2. CREATE ACCOUNT FORM */}
+        {/* 2. CREATE ACCOUNT FORM (Email + Create Password) */}
         {activeTab === 'register' && (
           <form onSubmit={handleRegister} className="space-y-4">
             <div className="space-y-1">
-              <label className="text-xs font-bold text-espresso-900">Your Full Name *</label>
+              <label className="text-xs font-bold text-espresso-900">Your Full Name (Optional)</label>
               <input
                 type="text"
-                required
                 value={regName}
                 onChange={(e) => setRegName(e.target.value)}
                 placeholder="e.g. Rahul Sharma"
                 className="w-full px-4 py-2.5 rounded-xl bg-cream-50 border border-gold/30 text-espresso-900 text-xs focus:outline-none focus:border-gold"
               />
             </div>
-            
+
             <div className="space-y-1">
               <label className="text-xs font-bold text-espresso-900">Email Address *</label>
               <input
@@ -245,12 +294,10 @@ export default function Login() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-espresso-900">10-Digit Phone Number *</label>
+              <label className="text-xs font-bold text-espresso-900">10-Digit Phone Number (Optional)</label>
               <input
                 type="tel"
-                required
                 maxLength={10}
-                pattern="[0-9]{10}"
                 value={regPhone}
                 onChange={(e) => setRegPhone(e.target.value)}
                 placeholder="e.g. 9876543210"
@@ -265,7 +312,7 @@ export default function Login() {
                 required
                 value={regPassword}
                 onChange={(e) => setRegPassword(e.target.value)}
-                placeholder="Create a secure password"
+                placeholder="Create a password"
                 className="w-full px-4 py-2.5 rounded-xl bg-cream-50 border border-gold/30 text-espresso-900 text-xs focus:outline-none focus:border-gold"
               />
             </div>
@@ -275,44 +322,94 @@ export default function Login() {
               className="w-full py-3.5 rounded-full bg-gold hover:bg-gold-dark text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2"
             >
               <UserPlus className="w-4 h-4" />
-              <span>Register Account</span>
+              <span>Create Account & Sign In</span>
             </button>
           </form>
         )}
 
-        {/* 3. FORGOT PASSWORD FLOW (Step 1 -> Step 2 -> Step 3) */}
+        {/* 3. FORGOT PASSWORD FLOW WITH EMAIL OTP */}
         {activeTab === 'forgot' && (
           <div className="space-y-4">
-            {resetStep === 1 && (
-              <form onSubmit={handleIdentifyAccount} className="space-y-4">
+            
+            {/* Step 1: Enter Email */}
+            {forgotStep === 1 && (
+              <form onSubmit={handleSendForgotOtp} className="space-y-4">
                 <p className="text-xs text-espresso-800/70 leading-relaxed">
-                  Enter your registered Email Address or 10-Digit Phone Number to reset your password.
+                  Enter your registered Email Address. We will send a 6-digit OTP code to verify your ownership.
                 </p>
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-espresso-900">Registered Email or Phone *</label>
+                  <label className="text-xs font-bold text-espresso-900">Registered Email Address *</label>
                   <input
-                    type="text"
+                    type="email"
                     required
-                    value={resetIdentifier}
-                    onChange={(e) => setResetIdentifier(e.target.value)}
-                    placeholder="e.g. user@wevibes.com or 9876543210"
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    placeholder="e.g. rahul@example.com"
                     className="w-full px-4 py-2.5 rounded-xl bg-cream-50 border border-gold/30 text-espresso-900 text-xs focus:outline-none focus:border-gold"
                   />
                 </div>
                 <button
                   type="submit"
+                  disabled={loading}
                   className="w-full py-3.5 rounded-full bg-espresso-800 hover:bg-espresso-900 text-gold-light font-bold text-sm shadow-md flex items-center justify-center gap-2"
                 >
-                  <span>Continue</span> <ArrowRight className="w-4 h-4" />
+                  {loading ? <Loader className="w-4 h-4 animate-spin" /> : <span>Send Email OTP</span>}
                 </button>
               </form>
             )}
 
-            {resetStep === 2 && (
-              <form onSubmit={handleSetNewPassword} className="space-y-4">
-                <div className="p-3 rounded-xl bg-gold/15 border border-gold/30 text-xs text-espresso-900">
-                  Setting new password for: <strong>{resetIdentifier}</strong>
+            {/* Step 2: Enter Email OTP */}
+            {forgotStep === 2 && (
+              <form onSubmit={handleVerifyForgotOtp} className="space-y-4">
+                <div className="p-3 rounded-xl bg-gold/15 border border-gold/30 text-xs text-espresso-900 text-center">
+                  6-Digit OTP sent to: <strong>{forgotEmail}</strong>
                 </div>
+
+                {previewUrl && (
+                  <div className="p-2.5 rounded-xl bg-gold-light/20 text-xs text-center border border-gold/40">
+                    ✉️ <a href={previewUrl} target="_blank" rel="noreferrer" className="text-gold-dark font-bold underline inline-flex items-center gap-1">
+                      Click to view email preview <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                )}
+
+                {devOtp && !previewUrl && (
+                  <div className="p-2 rounded-xl bg-cream-100 text-xs text-center font-mono font-bold text-gold-dark">
+                    Dev OTP: {devOtp}
+                  </div>
+                )}
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-espresso-900">Enter 6-Digit Email OTP *</label>
+                  <input
+                    type="text"
+                    required
+                    maxLength={6}
+                    value={forgotOtp}
+                    onChange={(e) => setForgotOtp(e.target.value)}
+                    placeholder="e.g. 123456"
+                    className="w-full px-4 py-3 rounded-xl bg-cream-50 border border-gold/30 text-center text-lg font-bold font-mono text-espresso-900 tracking-widest focus:outline-none focus:border-gold"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full py-3.5 rounded-full bg-gold hover:bg-gold-dark text-white font-bold text-sm shadow-md flex items-center justify-center gap-2"
+                >
+                  {loading ? <Loader className="w-4 h-4 animate-spin" /> : <span>Verify OTP</span>}
+                </button>
+              </form>
+            )}
+
+            {/* Step 3: Create New Password */}
+            {forgotStep === 3 && (
+              <form onSubmit={handleSetNewPassword} className="space-y-4">
+                <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2">
+                  <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
+                  <span>Email verified! Create your new password below.</span>
+                </div>
+
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-espresso-900">Create New Password *</label>
                   <input
@@ -321,9 +418,10 @@ export default function Login() {
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="Enter new password"
-                    className="w-full px-4 py-2.5 rounded-xl bg-cream-50 border border-gold/30 text-espresso-900 text-xs focus:outline-none focus:border-gold"
+                    className="w-full px-4 py-2.5 rounded-xl bg-cream-50 border border-gold/30 text-espresso-900 text-xs"
                   />
                 </div>
+
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-espresso-900">Confirm New Password *</label>
                   <input
@@ -332,30 +430,33 @@ export default function Login() {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Confirm new password"
-                    className="w-full px-4 py-2.5 rounded-xl bg-cream-50 border border-gold/30 text-espresso-900 text-xs focus:outline-none focus:border-gold"
+                    className="w-full px-4 py-2.5 rounded-xl bg-cream-50 border border-gold/30 text-espresso-900 text-xs"
                   />
                 </div>
+
                 <button
                   type="submit"
-                  className="w-full py-3.5 rounded-full bg-gold hover:bg-gold-dark text-white font-bold text-sm shadow-md flex items-center justify-center gap-2"
+                  className="w-full py-3.5 rounded-full bg-espresso-800 hover:bg-espresso-900 text-gold-light font-bold text-sm shadow-md"
                 >
-                  <KeyRound className="w-4 h-4" />
-                  <span>Update Password & Save</span>
+                  Update Password & Save
                 </button>
               </form>
             )}
 
-            {resetStep === 3 && (
-              <div className="text-center space-y-4">
+            {/* Step 4: Success Screen */}
+            {forgotStep === 4 && (
+              <div className="text-center space-y-4 py-2">
                 <CheckCircle className="w-12 h-12 text-emerald-600 mx-auto" />
+                <p className="font-bold text-espresso-900 text-sm">Password Updated Successfully!</p>
                 <button
-                  onClick={() => { setActiveTab('login'); setIdentifier(resetIdentifier); setPassword(newPassword); }}
+                  onClick={() => { setActiveTab('login'); setIdentifier(forgotEmail); setPassword(newPassword); }}
                   className="w-full py-3.5 rounded-full bg-espresso-800 hover:bg-espresso-900 text-gold-light font-bold text-sm shadow-md"
                 >
-                  Click Here to Sign In Now
+                  Sign In with New Password
                 </button>
               </div>
             )}
+
           </div>
         )}
 
