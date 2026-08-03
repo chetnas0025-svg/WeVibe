@@ -4,6 +4,7 @@ import { CartProvider } from './context/CartContext';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import CartDrawer from './components/CartDrawer';
+import CustomCursor from './components/CustomCursor';
 
 import Home from './pages/Home';
 import Menu from './pages/Menu';
@@ -15,6 +16,7 @@ export default function App() {
     <CartProvider>
       <Router>
         <div className="min-h-screen flex flex-col bg-cream-50 text-espresso-800 font-sans selection:bg-gold-light selection:text-espresso-900">
+          <CustomCursor />
           <Header />
           <CartDrawer />
           <main className="flex-1">
