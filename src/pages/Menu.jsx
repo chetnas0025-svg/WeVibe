@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { Search, Star, Filter, Coffee, Utensils, Flame, Sparkles, Heart, Check, Plus, ShoppingBag } from 'lucide-react';
+import { Search, Star, Filter, Coffee, Utensils, Flame, Sparkles, Heart, Check, Plus, Minus, ShoppingBag } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 
 export default function Menu() {
   const [activeCategory, setActiveCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [vegOnly, setVegOnly] = useState(false);
-  const { addToCart, lastAddedItem } = useCart();
+  
+  const { cartItems, addToCart, updateQuantity } = useCart();
 
   const fullMenuData = [
     // BURGERS
@@ -67,17 +68,14 @@ export default function Menu() {
     return matchesCat && matchesSearch && matchesVeg;
   });
 
+  const getItemQuantity = (id) => {
+    const cartItem = cartItems.find((i) => i.id === id);
+    return cartItem ? cartItem.quantity : 0;
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-10 animate-fadeIn">
       
-      {/* Toast Notification */}
-      {lastAddedItem && (
-        <div className="fixed top-24 right-5 z-50 p-4 rounded-2xl bg-espresso-900 text-gold-light border border-gold/40 shadow-2xl flex items-center gap-3 animate-scaleUp">
-          <Sparkles className="w-5 h-5 text-gold animate-spin" />
-          <span className="text-sm font-bold">"{lastAddedItem}" added to cart!</span>
-        </div>
-      )}
-
       {/* Header Banner */}
       <div className="text-center space-y-3">
         <span className="text-xs uppercase tracking-widest text-gold-dark font-bold flex items-center justify-center gap-1">
@@ -85,7 +83,7 @@ export default function Menu() {
         </span>
         <h1 className="font-serif text-4xl sm:text-5xl font-bold text-espresso-900">Explore Our Full Menu</h1>
         <p className="max-w-xl mx-auto text-espresso-800/70 text-base">
-          Click <strong>Add to Cart</strong> on your favorite items, then choose Table Order or Home Delivery at checkout!
+          Tap <strong>+ Add to Cart</strong> to add dishes with zero popups, then open your Cart to checkout!
         </p>
         <div className="w-16 h-1 bg-gold rounded-full mx-auto" />
       </div>
@@ -153,69 +151,94 @@ export default function Menu() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {filteredItems.map((item, idx) => (
-            <div
-              key={item.id}
-              className="bg-white rounded-3xl overflow-hidden border border-gold/20 shadow-md card-hover-effect flex flex-col justify-between group transition-all duration-500 animate-fadeIn"
-              style={{ animationDelay: `${idx * 0.05}s` }}
-            >
-              {/* Card Image Header */}
-              <div className="relative h-60 overflow-hidden bg-cream-100">
-                <img
-                  src={item.image}
-                  alt={item.name}
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                />
+          {filteredItems.map((item, idx) => {
+            const qty = getItemQuantity(item.id);
 
-                {/* Badges */}
-                <div className="absolute top-3 left-3 flex gap-2">
-                  {item.mustTry && (
-                    <span className="px-3 py-1 rounded-full bg-gradient-to-r from-gold to-gold-dark text-white text-[10px] font-bold uppercase tracking-wider shadow-md animate-pulse">
-                      Must Try
-                    </span>
-                  )}
-                  {item.spicy && (
-                    <span className="px-2.5 py-1 rounded-full bg-rose-600 text-white text-[10px] font-bold uppercase flex items-center gap-1 shadow-md">
-                      <Flame className="w-3 h-3 fill-white" /> Spicy
-                    </span>
-                  )}
-                </div>
+            return (
+              <div
+                key={item.id}
+                className="bg-white rounded-3xl overflow-hidden border border-gold/20 shadow-md card-hover-effect flex flex-col justify-between group transition-all duration-500 animate-fadeIn"
+                style={{ animationDelay: `${idx * 0.05}s` }}
+              >
+                {/* Card Image Header */}
+                <div className="relative h-60 overflow-hidden bg-cream-100">
+                  <img
+                    src={item.image}
+                    alt={item.name}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                  />
 
-                <span className="absolute top-3 right-3 px-3.5 py-1 rounded-full bg-white/90 backdrop-blur-md text-gold-dark font-bold text-sm shadow-md font-serif">
-                  {item.price}
-                </span>
-              </div>
-
-              {/* Card Body */}
-              <div className="p-6 space-y-4 flex-1 flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] uppercase tracking-wider text-gold-dark font-bold">
-                      {item.category}
-                    </span>
-                    <span className={`w-3 h-3 rounded-full ${item.veg ? 'bg-emerald-500' : 'bg-rose-500'}`} title={item.veg ? '100% Veg' : 'Non-Veg'} />
+                  {/* Badges */}
+                  <div className="absolute top-3 left-3 flex gap-2">
+                    {item.mustTry && (
+                      <span className="px-3 py-1 rounded-full bg-gradient-to-r from-gold to-gold-dark text-white text-[10px] font-bold uppercase tracking-wider shadow-md animate-pulse">
+                        Must Try
+                      </span>
+                    )}
+                    {item.spicy && (
+                      <span className="px-2.5 py-1 rounded-full bg-rose-600 text-white text-[10px] font-bold uppercase flex items-center gap-1 shadow-md">
+                        <Flame className="w-3 h-3 fill-white" /> Spicy
+                      </span>
+                    )}
                   </div>
-                  <h3 className="font-serif font-bold text-xl text-espresso-900 mt-1 group-hover:text-gold-dark transition-colors">
-                    {item.name}
-                  </h3>
-                  <p className="text-espresso-800/70 text-xs sm:text-sm mt-1.5 leading-relaxed">
-                    {item.desc}
-                  </p>
+
+                  <span className="absolute top-3 right-3 px-3.5 py-1 rounded-full bg-white/90 backdrop-blur-md text-gold-dark font-bold text-sm shadow-md font-serif">
+                    {item.price}
+                  </span>
                 </div>
 
-                {/* Add to Cart Button */}
-                <div className="pt-3 border-t border-cream-200">
-                  <button
-                    onClick={() => addToCart(item)}
-                    className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-gold via-gold-dark to-gold hover:from-gold-dark hover:to-gold text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 transform hover:scale-105 animate-glow"
-                  >
-                    <ShoppingBag className="w-4 h-4 text-white" />
-                    <span>Add to Cart</span>
-                  </button>
+                {/* Card Body */}
+                <div className="p-6 space-y-4 flex-1 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] uppercase tracking-wider text-gold-dark font-bold">
+                        {item.category}
+                      </span>
+                      <span className={`w-3 h-3 rounded-full ${item.veg ? 'bg-emerald-500' : 'bg-rose-500'}`} title={item.veg ? '100% Veg' : 'Non-Veg'} />
+                    </div>
+                    <h3 className="font-serif font-bold text-xl text-espresso-900 mt-1 group-hover:text-gold-dark transition-colors">
+                      {item.name}
+                    </h3>
+                    <p className="text-espresso-800/70 text-xs sm:text-sm mt-1.5 leading-relaxed">
+                      {item.desc}
+                    </p>
+                  </div>
+
+                  {/* INLINE QUANTITY STEPPER OR ADD BUTTON (Zero Popups) */}
+                  <div className="pt-3 border-t border-cream-200">
+                    {qty === 0 ? (
+                      <button
+                        onClick={() => addToCart(item)}
+                        className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-gold via-gold-dark to-gold hover:from-gold-dark hover:to-gold text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 transform hover:scale-105 animate-glow"
+                      >
+                        <Plus className="w-4 h-4 text-white" />
+                        <span>Add to Cart</span>
+                      </button>
+                    ) : (
+                      <div className="w-full p-1.5 rounded-2xl bg-espresso-900 border border-gold/40 shadow-lg flex items-center justify-between animate-scaleUp">
+                        <button
+                          onClick={() => updateQuantity(item.id, -1)}
+                          className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 text-gold-light flex items-center justify-center font-bold transition-all"
+                        >
+                          <Minus className="w-4 h-4" />
+                        </button>
+                        <div className="text-center">
+                          <span className="font-mono font-bold text-base text-gold-light">{qty}</span>
+                          <span className="text-[10px] text-cream-200/70 block font-sans">in Cart</span>
+                        </div>
+                        <button
+                          onClick={() => updateQuantity(item.id, 1)}
+                          className="w-9 h-9 rounded-xl bg-gold hover:bg-gold-dark text-espresso-900 flex items-center justify-center font-bold transition-all shadow"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
