@@ -64,16 +64,6 @@ export default function Footer() {
                   <span>•</span> Reserve a Table
                 </Link>
               </li>
-              <li>
-                <Link to="/account" className="hover:text-gold transition-colors flex items-center gap-1.5">
-                  <span>•</span> My Account
-                </Link>
-              </li>
-              <li>
-                <Link to="/login" className="hover:text-gold transition-colors flex items-center gap-1.5">
-                  <span>•</span> Sign In / Register
-                </Link>
-              </li>
             </ul>
           </div>
 

@@ -1,22 +1,12 @@
 import React, { useState } from 'react';
-import { Search, Star, Filter, Coffee, Utensils, Flame, Sparkles, Heart, Check, ChevronRight, Truck } from 'lucide-react';
-import OrderModal from '../components/OrderModal';
+import { Search, Star, Filter, Coffee, Utensils, Flame, Sparkles, Heart, Check, Plus, ShoppingBag } from 'lucide-react';
+import { useCart } from '../context/CartContext';
 
 export default function Menu() {
   const [activeCategory, setActiveCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [vegOnly, setVegOnly] = useState(false);
-
-  // Order modal state
-  const [selectedItem, setSelectedItem] = useState(null);
-  const [orderType, setOrderType] = useState('table');
-  const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
-
-  const handleOpenOrder = (item, type = 'table') => {
-    setSelectedItem(item);
-    setOrderType(type);
-    setIsOrderModalOpen(true);
-  };
+  const { addToCart, lastAddedItem } = useCart();
 
   const fullMenuData = [
     // BURGERS
@@ -80,6 +70,14 @@ export default function Menu() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-10 animate-fadeIn">
       
+      {/* Toast Notification */}
+      {lastAddedItem && (
+        <div className="fixed top-24 right-5 z-50 p-4 rounded-2xl bg-espresso-900 text-gold-light border border-gold/40 shadow-2xl flex items-center gap-3 animate-scaleUp">
+          <Sparkles className="w-5 h-5 text-gold animate-spin" />
+          <span className="text-sm font-bold">"{lastAddedItem}" added to cart!</span>
+        </div>
+      )}
+
       {/* Header Banner */}
       <div className="text-center space-y-3">
         <span className="text-xs uppercase tracking-widest text-gold-dark font-bold flex items-center justify-center gap-1">
@@ -87,7 +85,7 @@ export default function Menu() {
         </span>
         <h1 className="font-serif text-4xl sm:text-5xl font-bold text-espresso-900">Explore Our Full Menu</h1>
         <p className="max-w-xl mx-auto text-espresso-800/70 text-base">
-          Click <strong>Order at Table</strong> or <strong>Home Delivery</strong> for instant, fast ordering!
+          Click <strong>Add to Cart</strong> on your favorite items, then choose Table Order or Home Delivery at checkout!
         </p>
         <div className="w-16 h-1 bg-gold rounded-full mx-auto" />
       </div>
@@ -142,7 +140,7 @@ export default function Menu() {
         </div>
       </div>
 
-      {/* Menu Items Grid with Animated Reveal */}
+      {/* Menu Items Grid */}
       {filteredItems.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-3xl border border-gold/20 p-8">
           <p className="text-espresso-800/70 text-lg">No items found for "{searchQuery}".</p>
@@ -205,21 +203,14 @@ export default function Menu() {
                   </p>
                 </div>
 
-                {/* Fast Action Order Buttons */}
-                <div className="pt-3 border-t border-cream-200 flex flex-col sm:flex-row gap-2">
+                {/* Add to Cart Button */}
+                <div className="pt-3 border-t border-cream-200">
                   <button
-                    onClick={() => handleOpenOrder(item, 'table')}
-                    className="flex-1 py-2.5 px-3 rounded-xl bg-espresso-900 hover:bg-espresso-800 text-gold-light font-bold text-xs shadow transition-all flex items-center justify-center gap-1.5 hover:scale-105"
+                    onClick={() => addToCart(item)}
+                    className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-gold via-gold-dark to-gold hover:from-gold-dark hover:to-gold text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 transform hover:scale-105 animate-glow"
                   >
-                    <Utensils className="w-3.5 h-3.5 text-gold" />
-                    <span>Order at Table</span>
-                  </button>
-                  <button
-                    onClick={() => handleOpenOrder(item, 'delivery')}
-                    className="flex-1 py-2.5 px-3 rounded-xl bg-gold/15 hover:bg-gold/25 text-espresso-900 border border-gold/40 font-bold text-xs transition-all flex items-center justify-center gap-1.5 hover:scale-105"
-                  >
-                    <Truck className="w-3.5 h-3.5 text-gold-dark" />
-                    <span>Home Delivery</span>
+                    <ShoppingBag className="w-4 h-4 text-white" />
+                    <span>Add to Cart</span>
                   </button>
                 </div>
               </div>
@@ -227,14 +218,6 @@ export default function Menu() {
           ))}
         </div>
       )}
-
-      {/* Order Modal Component */}
-      <OrderModal
-        isOpen={isOrderModalOpen}
-        onClose={() => setIsOrderModalOpen(false)}
-        item={selectedItem}
-        initialType={orderType}
-      />
 
     </div>
   );

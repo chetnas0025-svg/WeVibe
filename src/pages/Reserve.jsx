@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, Users, Phone, Mail, User, Heart, Sparkles, CheckCircle2, MessageSquare } from 'lucide-react';
+import { Calendar, Clock, Users, Phone, Mail, User, Heart, Sparkles, CheckCircle2, MessageSquare, PartyPopper } from 'lucide-react';
 
 export default function Reserve() {
   const [formData, setFormData] = useState({
@@ -8,7 +8,7 @@ export default function Reserve() {
     email: '',
     date: '',
     time: '12:00',
-    guests: '2',
+    guests: '2 Guests',
     occasion: 'Casual Dining',
     notes: ''
   });
@@ -50,30 +50,10 @@ export default function Reserve() {
         created_at: new Date().toISOString()
       };
 
-      // Save to localStorage for My Account view
+      // Save to localStorage for active booking history
       const existingBookings = JSON.parse(localStorage.getItem('wevibes_user_bookings') || '[]');
       existingBookings.unshift(newBooking);
       localStorage.setItem('wevibes_user_bookings', JSON.stringify(existingBookings));
-
-      // Record to PostgreSQL database endpoint
-      try {
-        await fetch('/api/reservations', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: formData.name,
-            phone: formData.phone,
-            email: formData.email,
-            date: formData.date,
-            time: formData.time,
-            party_size: parseInt(formData.guests, 10),
-            occasion_note: `${formData.occasion}${formData.notes ? ' - ' + formData.notes : ''}`,
-            status: 'confirmed'
-          })
-        });
-      } catch (dbErr) {
-        console.warn("Local DB sync notice:", dbErr.message);
-      }
 
       setConfirmedBooking(newBooking);
     } catch (err) {
@@ -85,28 +65,35 @@ export default function Reserve() {
 
   if (confirmedBooking) {
     const waText = encodeURIComponent(
-      `Hello We Vibes Cafe! 🌸\nI would like to confirm my table reservation:\n\n` +
-      `• Booking ID: ${confirmedBooking.id}\n` +
-      `• Name: ${confirmedBooking.name}\n` +
-      `• Contact: ${confirmedBooking.phone}\n` +
-      `• Email: ${confirmedBooking.email}\n` +
-      `• Date: ${confirmedBooking.date}\n` +
-      `• Time: ${confirmedBooking.time}\n` +
-      `• Guests: ${confirmedBooking.guests} Person(s)\n` +
-      `• Occasion: ${confirmedBooking.occasion}`
+      `🌸✨ *WE VIBES CAFE — TABLE RESERVATION* ✨🌸\n\n` +
+      `Hello We Vibes Team! 🥂 I would love to reserve a table for our dining experience:\n\n` +
+      `📋 *BOOKING DETAILS:*\n` +
+      `• 🔖 *Booking ID:* ${confirmedBooking.id}\n` +
+      `• 👤 *Guest Name:* ${confirmedBooking.name}\n` +
+      `• 📱 *Contact:* ${confirmedBooking.phone}\n` +
+      `• 📧 *Email:* ${confirmedBooking.email}\n` +
+      `• 📆 *Date:* ${confirmedBooking.date}\n` +
+      `• ⏰ *Time:* ${confirmedBooking.time}\n` +
+      `• 👥 *Guests:* ${confirmedBooking.guests}\n` +
+      `• 🎉 *Occasion:* ${confirmedBooking.occasion}\n` +
+      (confirmedBooking.notes ? `• 📝 *Seating Note:* ${confirmedBooking.notes}\n` : '') +
+      `\n💖 *GUEST NOTE:*\n` +
+      `"Thank you so much for hosting us! We are looking forward to a magical, delicious time at We Vibes Cafe! 🍷☕✨"`
     );
 
     return (
       <div className="max-w-3xl mx-auto px-4 py-16 text-center space-y-8 animate-fadeIn">
-        <div className="w-20 h-20 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-xl">
+        <div className="w-20 h-20 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-xl animate-scaleUp">
           <CheckCircle2 className="w-10 h-10" />
         </div>
 
         <div className="space-y-3">
-          <span className="text-xs uppercase tracking-widest text-gold-dark font-bold">Reservation Reserved</span>
+          <span className="text-xs uppercase tracking-widest text-gold-dark font-bold flex items-center justify-center gap-1">
+            <Sparkles className="w-4 h-4 text-gold" /> Table Reservation Confirmed
+          </span>
           <h1 className="font-serif text-4xl font-bold text-espresso-900">See You Soon at We Vibes!</h1>
           <p className="text-espresso-800/70 text-base max-w-md mx-auto">
-            Your table reservation has been saved! Click below to send your reservation directly to our WhatsApp.
+            Your table reservation has been recorded. Click below to send your details directly to our WhatsApp!
           </p>
         </div>
 
@@ -122,7 +109,7 @@ export default function Reserve() {
             </div>
             <div>
               <p className="text-xs text-espresso-800/60">Guests</p>
-              <p className="font-semibold text-espresso-900">{confirmedBooking.guests} Person(s)</p>
+              <p className="font-semibold text-espresso-900">{confirmedBooking.guests}</p>
             </div>
             <div>
               <p className="text-xs text-espresso-800/60">Date</p>
@@ -140,10 +127,10 @@ export default function Reserve() {
             href={`https://wa.me/918950191495?text=${waText}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-8 py-4 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-base shadow-xl flex items-center justify-center gap-2 transform hover:scale-105 transition-all"
+            className="px-8 py-4 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-base shadow-xl flex items-center justify-center gap-2 transform hover:scale-105 transition-all animate-glow"
           >
-            <MessageSquare className="w-5 h-5" />
-            <span>Confirm Reservation via WhatsApp</span>
+            <MessageSquare className="w-5 h-5 fill-white text-white" />
+            <span>Confirm Reservation via WhatsApp 🌸</span>
           </a>
           <button
             onClick={() => { setConfirmedBooking(null); setFormData(prev => ({ ...prev, name: '', notes: '' })); }}
@@ -157,14 +144,14 @@ export default function Reserve() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-10">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-10 animate-fadeIn">
       
       {/* Header */}
       <div className="text-center space-y-3">
         <span className="text-xs uppercase tracking-widest text-gold-dark font-bold">Priority Dining</span>
         <h1 className="font-serif text-4xl sm:text-5xl font-bold text-espresso-900">Reserve a Table</h1>
         <p className="max-w-xl mx-auto text-espresso-800/70 text-base">
-          Direct table booking with instant WhatsApp confirmation. Hours: <strong>10:00 AM – 10:00 PM</strong>.
+          Direct table booking with instant, aesthetic WhatsApp confirmation. Hours: <strong>10:00 AM – 10:00 PM</strong>.
         </p>
         <div className="w-16 h-1 bg-gold rounded-full mx-auto" />
       </div>
@@ -241,7 +228,7 @@ export default function Reserve() {
             </div>
           </div>
 
-          {/* Row 3: Time & Guests */}
+          {/* Row 3: Time & Guests (including 20+ Guests option) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <label className="text-sm font-semibold text-espresso-900 flex items-center gap-2">
@@ -267,13 +254,16 @@ export default function Reserve() {
                 name="guests"
                 value={formData.guests}
                 onChange={handleChange}
-                className="w-full px-4 py-3 rounded-xl bg-cream-50 border border-gold/30 text-espresso-900 text-sm focus:outline-none focus:border-gold focus:bg-white transition-all"
+                className="w-full px-4 py-3 rounded-xl bg-cream-50 border border-gold/30 text-espresso-900 text-sm focus:outline-none focus:border-gold focus:bg-white transition-all font-medium"
               >
-                {[...Array(20)].map((_, i) => (
-                  <option key={i + 1} value={i + 1}>
+                {[...Array(19)].map((_, i) => (
+                  <option key={i + 1} value={`${i + 1} ${i === 0 ? 'Guest' : 'Guests'}`}>
                     {i + 1} {i === 0 ? 'Guest' : 'Guests'}
                   </option>
                 ))}
+                <option value="20+ Guests (Grand Party / Event)">
+                  🎉 20+ Guests (Grand Party / Event)
+                </option>
               </select>
             </div>
           </div>
@@ -293,6 +283,7 @@ export default function Reserve() {
                 <option value="Anniversary">Anniversary</option>
                 <option value="Business Meeting">Business Meeting</option>
                 <option value="Romantic Date">Romantic Date</option>
+                <option value="Grand Party / Event">Grand Party / Event</option>
               </select>
             </div>
 
@@ -312,10 +303,10 @@ export default function Reserve() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-4 rounded-full bg-gradient-to-r from-gold via-gold-dark to-gold hover:from-gold-dark hover:to-gold text-white font-bold text-base shadow-xl hover:shadow-2xl transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
+            className="w-full py-4 rounded-full bg-gradient-to-r from-gold via-gold-dark to-gold hover:from-gold-dark hover:to-gold text-white font-bold text-base shadow-xl hover:shadow-2xl transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2 animate-glow"
           >
             <Sparkles className="w-5 h-5" />
-            <span>{loading ? 'Confirming Table...' : 'Confirm Table & Open WhatsApp'}</span>
+            <span>{loading ? 'Confirming Table...' : 'Confirm Table & Open WhatsApp 🌸'}</span>
           </button>
         </form>
       </div>
