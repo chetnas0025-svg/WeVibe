@@ -32,8 +32,7 @@ export const CartProvider = ({ children }) => {
     });
 
     setLastAddedItem(item.name);
-    setIsCartOpen(true);
-    setTimeout(() => setLastAddedItem(null), 3000);
+    setTimeout(() => setLastAddedItem(null), 2500);
   };
 
   const removeFromCart = (id) => {
